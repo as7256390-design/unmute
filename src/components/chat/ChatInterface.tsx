@@ -15,9 +15,11 @@ import { CrisisResourcesBanner } from '@/components/crisis/CrisisResourcesBanner
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 const initialGreetings = [
-  "I hear you, and I'm really glad you reached out. Whatever you're going through, you don't have to face it alone. Can you tell me more about what's on your mind?",
-  "Thank you for trusting me with this. Your feelings are completely valid. Let's take this one step at a time. What's weighing on you the most right now?",
-  "I'm here to listen without judgment. You're brave for opening up. What would feel most helpful for you right now - just venting, or exploring some ways to cope?",
+  "Hey, I'm really glad you're here. 💙 Whatever you're going through, you don't have to face it alone. I'm here to listen — no judgment, no pressure. What's on your mind?",
+  "Thank you for trusting me with this. Your feelings are completely valid, and it takes courage to reach out. Take your time — I'm here whenever you're ready to share.",
+  "I'm here for you, and I'm listening. There's no rush, no right or wrong way to feel. What would help you most right now — just talking things out, or finding some ways to feel better?",
+  "Hey there. I know reaching out isn't always easy, so thank you for being here. Whatever's going on, we can work through it together. What would you like to talk about?",
+  "I'm so glad you came here. Your feelings matter, and so do you. Let's take this one step at a time. What's weighing on you the most right now?",
 ];
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -353,7 +355,7 @@ export function ChatInterface() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Share what's on your mind... This is a safe space."
+              placeholder="What's on your mind? I'm here to listen..."
               className="min-h-[60px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pr-12"
               rows={1}
             />
@@ -361,15 +363,18 @@ export function ChatInterface() {
               variant="gradient"
               size="icon"
               onClick={handleSend}
-              disabled={!input.trim()}
+              disabled={!input.trim() || isTyping}
               className="absolute right-2 bottom-2"
             >
               <Send className="h-4 w-4" />
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground text-center mt-2">
-            Everything you share here is private and secure
-          </p>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-safe animate-pulse" />
+            <p className="text-xs text-muted-foreground">
+              Private & encrypted • No one can see your conversations
+            </p>
+          </div>
         </div>
       </div>
     </div>
