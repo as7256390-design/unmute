@@ -1,0 +1,109 @@
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { Chat, Message, EmotionalState, UserProfile } from '@/types';
+
+interface AppContextType {
+  // Chat state
+  chats: Chat[];
+  currentChat: Chat | null;
+  setCurrentChat: (chat: Chat | null) => void;
+  createNewChat: () => Chat;
+  addMessage: (chatId: string, message: Omit<Message, 'id' | 'timestamp'>) => void;
+  
+  // User state
+  userProfile: UserProfile | null;
+  setUserProfile: (profile: UserProfile | null) => void;
+  currentEmotionalState: EmotionalState | null;
+  setCurrentEmotionalState: (state: EmotionalState | null) => void;
+  
+  // UI state
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+  userType: 'student' | 'parent' | null;
+  setUserType: (type: 'student' | 'parent' | null) => void;
+  
+  // Navigation
+  currentView: 'chat' | 'emotional-form' | 'phq9' | 'support-rooms' | 'wall' | 'journal' | 'dashboard' | 'parent' | 'onboarding';
+  setCurrentView: (view: 'chat' | 'emotional-form' | 'phq9' | 'support-rooms' | 'wall' | 'journal' | 'dashboard' | 'parent' | 'onboarding') => void;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export function AppProvider({ children }: { children: ReactNode }) {
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [currentChat, setCurrentChat] = useState<Chat | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [currentEmotionalState, setCurrentEmotionalState] = useState<EmotionalState | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [userType, setUserType] = useState<'student' | 'parent' | null>(null);
+  const [currentView, setCurrentView] = useState<'chat' | 'emotional-form' | 'phq9' | 'support-rooms' | 'wall' | 'journal' | 'dashboard' | 'parent' | 'onboarding'>('onboarding');
+
+  const createNewChat = useCallback(() => {
+    const newChat: Chat = {
+      id: crypto.randomUUID(),
+      title: 'New Conversation',
+      messages: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      emotionalState: currentEmotionalState || undefined,
+    };
+    setChats(prev => [newChat, ...prev]);
+    setCurrentChat(newChat);
+    return newChat;
+  }, [currentEmotionalState]);
+
+  const addMessage = useCallback((chatId: string, message: Omit<Message, 'id' | 'timestamp'>) => {
+    const newMessage: Message = {
+      ...message,
+      id: crypto.randomUUID(),
+      timestamp: new Date(),
+    };
+
+    setChats(prev => prev.map(chat => {
+      if (chat.id === chatId) {
+        const updatedChat = {
+          ...chat,
+          messages: [...chat.messages, newMessage],
+          updatedAt: new Date(),
+          title: chat.messages.length === 0 && message.role === 'user' 
+            ? message.content.slice(0, 30) + (message.content.length > 30 ? '...' : '')
+            : chat.title,
+        };
+        if (currentChat?.id === chatId) {
+          setCurrentChat(updatedChat);
+        }
+        return updatedChat;
+      }
+      return chat;
+    }));
+  }, [currentChat]);
+
+  return (
+    <AppContext.Provider value={{
+      chats,
+      currentChat,
+      setCurrentChat,
+      createNewChat,
+      addMessage,
+      userProfile,
+      setUserProfile,
+      currentEmotionalState,
+      setCurrentEmotionalState,
+      sidebarOpen,
+      setSidebarOpen,
+      userType,
+      setUserType,
+      currentView,
+      setCurrentView,
+    }}>
+      {children}
+    </AppContext.Provider>
+  );
+}
+
+export function useApp() {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useApp must be used within an AppProvider');
+  }
+  return context;
+}
