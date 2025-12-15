@@ -1,4 +1,7 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/hooks/useAuth';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { ChatInterface } from '@/components/chat/ChatInterface';
@@ -9,9 +12,30 @@ import { SupportWall } from '@/components/support/SupportWall';
 import { Journal } from '@/components/journal/Journal';
 import { GrowthDashboard } from '@/components/dashboard/GrowthDashboard';
 import { ParentInterface } from '@/components/parent/ParentInterface';
+import { Loader2 } from 'lucide-react';
 
 const Index = () => {
   const { currentView, userType } = useApp();
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   // Show onboarding for new users
   if (currentView === 'onboarding' && !userType) {

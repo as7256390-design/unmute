@@ -1,93 +1,22 @@
-import { useState } from 'react';
-import { Users, MessageCircle, Clock, ArrowRight, Sparkles } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, ArrowRight, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
+import { SupportRoomChat } from './SupportRoomChat';
 
-const supportRooms = [
-  { 
-    id: '1', 
-    name: 'Exam Panic Zone', 
-    emoji: '📚', 
-    description: 'Feeling overwhelmed by exams? Join others who understand.',
-    memberCount: 24, 
-    isActive: true,
-    category: 'academic'
-  },
-  { 
-    id: '2', 
-    name: 'Social Anxiety Circle', 
-    emoji: '🫂', 
-    description: 'A safe space for those who find social situations challenging.',
-    memberCount: 18, 
-    isActive: true,
-    category: 'anxiety'
-  },
-  { 
-    id: '3', 
-    name: 'Let\'s Just Talk', 
-    emoji: '💬', 
-    description: 'No specific topic. Just chat about life, feelings, anything.',
-    memberCount: 32, 
-    isActive: true,
-    category: 'general'
-  },
-  { 
-    id: '4', 
-    name: 'Relationship Pain', 
-    emoji: '💔', 
-    description: 'Heartbreak, family issues, friendship struggles - all welcome.',
-    memberCount: 15, 
-    isActive: true,
-    category: 'relationships'
-  },
-  { 
-    id: '5', 
-    name: 'LGBTQ+ Safe Space', 
-    emoji: '🏳️‍🌈', 
-    description: 'A supportive community for LGBTQ+ students.',
-    memberCount: 12, 
-    isActive: true,
-    category: 'identity'
-  },
-  { 
-    id: '6', 
-    name: 'Career Confusion', 
-    emoji: '🎯', 
-    description: 'Not sure about your future? Let\'s figure it out together.',
-    memberCount: 21, 
-    isActive: true,
-    category: 'career'
-  },
-  { 
-    id: '7', 
-    name: 'Living Away from Home', 
-    emoji: '🏠', 
-    description: 'For students dealing with homesickness and independence.',
-    memberCount: 27, 
-    isActive: true,
-    category: 'lifestyle'
-  },
-  { 
-    id: '8', 
-    name: 'Late Night Thoughts', 
-    emoji: '🌙', 
-    description: 'Can\'t sleep? Overthinking? You\'re not alone tonight.',
-    memberCount: 19, 
-    isActive: true,
-    category: 'general'
-  },
-  { 
-    id: '9', 
-    name: 'Parent Pressure', 
-    emoji: '👨‍👩‍👧', 
-    description: 'Dealing with expectations and family dynamics.',
-    memberCount: 28, 
-    isActive: true,
-    category: 'family'
-  },
-];
+interface SupportRoom {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  category: string;
+  is_active: boolean;
+}
 
 const categories = [
   { id: 'all', label: 'All Rooms' },
@@ -99,15 +28,117 @@ const categories = [
 ];
 
 export function SupportRooms() {
+  const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [rooms, setRooms] = useState<SupportRoom[]>([]);
+  const [memberCounts, setMemberCounts] = useState<Record<string, number>>({});
+  const [joinedRooms, setJoinedRooms] = useState<Set<string>>(new Set());
+  const [selectedRoom, setSelectedRoom] = useState<SupportRoom | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [joiningRoom, setJoiningRoom] = useState<string | null>(null);
 
-  const filteredRooms = supportRooms.filter(room => {
+  useEffect(() => {
+    fetchRooms();
+    if (user) fetchMemberships();
+  }, [user]);
+
+  const fetchRooms = async () => {
+    const { data, error } = await supabase
+      .from('support_rooms')
+      .select('*')
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching rooms:', error);
+      toast.error('Failed to load rooms');
+    } else {
+      setRooms(data || []);
+      // Fetch member counts for each room
+      const counts: Record<string, number> = {};
+      for (const room of data || []) {
+        const { count } = await supabase
+          .from('room_memberships')
+          .select('*', { count: 'exact', head: true })
+          .eq('room_id', room.id);
+        counts[room.id] = count || 0;
+      }
+      setMemberCounts(counts);
+    }
+    setLoading(false);
+  };
+
+  const fetchMemberships = async () => {
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from('room_memberships')
+      .select('room_id')
+      .eq('user_id', user.id);
+
+    setJoinedRooms(new Set(data?.map((m) => m.room_id) || []));
+  };
+
+  const handleJoinRoom = async (room: SupportRoom) => {
+    if (!user) {
+      toast.error('Please sign in to join rooms');
+      return;
+    }
+
+    setJoiningRoom(room.id);
+
+    if (joinedRooms.has(room.id)) {
+      // Already joined, open chat
+      setSelectedRoom(room);
+      setJoiningRoom(null);
+      return;
+    }
+
+    const { error } = await supabase.from('room_memberships').insert({
+      room_id: room.id,
+      user_id: user.id,
+    });
+
+    if (error) {
+      console.error('Error joining room:', error);
+      toast.error('Failed to join room');
+    } else {
+      setJoinedRooms((prev) => new Set([...prev, room.id]));
+      setMemberCounts((prev) => ({
+        ...prev,
+        [room.id]: (prev[room.id] || 0) + 1,
+      }));
+      toast.success(`Joined ${room.name}`);
+      setSelectedRoom(room);
+    }
+
+    setJoiningRoom(null);
+  };
+
+  const filteredRooms = rooms.filter((room) => {
     const matchesCategory = selectedCategory === 'all' || room.category === selectedCategory;
-    const matchesSearch = room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         room.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch =
+      room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      room.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  if (selectedRoom) {
+    return (
+      <SupportRoomChat
+        room={selectedRoom}
+        onBack={() => setSelectedRoom(null)}
+      />
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -133,7 +164,7 @@ export function SupportRooms() {
             className="flex-1"
           />
           <div className="flex gap-2 flex-wrap">
-            {categories.map(cat => (
+            {categories.map((cat) => (
               <Button
                 key={cat.id}
                 variant={selectedCategory === cat.id ? 'default' : 'ghost'}
@@ -154,32 +185,51 @@ export function SupportRooms() {
             key={room.id}
             className="glass rounded-2xl p-5 hover:shadow-medium transition-all hover:scale-[1.02] cursor-pointer group animate-slide-up"
             style={{ animationDelay: `${index * 50}ms` }}
+            onClick={() => handleJoinRoom(room)}
           >
             <div className="flex items-start justify-between mb-4">
               <span className="text-4xl">{room.emoji}</span>
-              {room.isActive && (
-                <Badge variant="secondary" className="bg-safe/20 text-safe">
-                  <span className="w-2 h-2 bg-safe rounded-full mr-1.5 animate-pulse" />
-                  Active
-                </Badge>
-              )}
+              <div className="flex items-center gap-2">
+                {joinedRooms.has(room.id) && (
+                  <Badge variant="outline" className="text-primary border-primary">
+                    Joined
+                  </Badge>
+                )}
+                {room.is_active && (
+                  <Badge variant="secondary" className="bg-safe/20 text-safe">
+                    <span className="w-2 h-2 bg-safe rounded-full mr-1.5 animate-pulse" />
+                    Active
+                  </Badge>
+                )}
+              </div>
             </div>
-            
+
             <h3 className="font-display font-semibold text-lg mb-2 group-hover:text-primary transition-colors">
               {room.name}
             </h3>
             <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
               {room.description}
             </p>
-            
+
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Users className="h-4 w-4" />
-                <span>{room.memberCount} online</span>
+                <span>{memberCounts[room.id] || 0} members</span>
               </div>
-              <Button variant="ghost" size="sm" className="gap-1 group-hover:text-primary">
-                Join
-                <ArrowRight className="h-3 w-3" />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 group-hover:text-primary"
+                disabled={joiningRoom === room.id}
+              >
+                {joiningRoom === room.id ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <>
+                    {joinedRooms.has(room.id) ? 'Open' : 'Join'}
+                    <ArrowRight className="h-3 w-3" />
+                  </>
+                )}
               </Button>
             </div>
           </div>

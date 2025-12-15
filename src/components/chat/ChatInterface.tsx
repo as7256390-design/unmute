@@ -3,10 +3,14 @@ import { Send, Sparkles, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { EmotionalCheckIn } from './EmotionalCheckIn';
 import { Message } from '@/types';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { detectCrisis } from '@/lib/crisisDetection';
+import { CrisisResourcesBanner } from '@/components/crisis/CrisisResourcesBanner';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
@@ -95,11 +99,15 @@ async function streamChat({
 }
 
 export function ChatInterface() {
-  const { currentChat, addMessage, createNewChat, currentEmotionalState } = useApp();
+  const { currentChat, addMessage, createNewChat, currentEmotionalState, setCurrentChat } = useApp();
+  const { user } = useAuth();
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const [showCheckIn, setShowCheckIn] = useState(!currentChat || currentChat.messages.length === 0);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [showCrisisResources, setShowCrisisResources] = useState(false);
+  const [isAbuse, setIsAbuse] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -107,9 +115,75 @@ export function ChatInterface() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [currentChat?.messages, streamingContent]);
 
-  const handleCheckInComplete = (emotion: string, supportType: string) => {
+  // Load existing conversation on mount
+  useEffect(() => {
+    if (!user) return;
+    
+    const loadRecentConversation = async () => {
+      const { data: conversations } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(1);
+
+      if (conversations && conversations.length > 0) {
+        const conv = conversations[0];
+        setConversationId(conv.id);
+
+        // Load messages
+        const { data: messages } = await supabase
+          .from('chat_messages')
+          .select('*')
+          .eq('conversation_id', conv.id)
+          .order('created_at', { ascending: true });
+
+        if (messages && messages.length > 0) {
+          const chat = createNewChat();
+          messages.forEach((msg) => {
+            addMessage(chat.id, {
+              role: msg.role as 'user' | 'assistant',
+              content: msg.content,
+            });
+          });
+          setShowCheckIn(false);
+        }
+      }
+    };
+
+    loadRecentConversation();
+  }, [user]);
+
+  const saveMessageToDb = async (role: 'user' | 'assistant', content: string, convId: string) => {
+    if (!user) return;
+
+    await supabase.from('chat_messages').insert({
+      conversation_id: convId,
+      user_id: user.id,
+      role,
+      content,
+    });
+  };
+
+  const handleCheckInComplete = async (emotion: string, supportType: string) => {
     const chat = currentChat || createNewChat();
     setShowCheckIn(false);
+
+    // Create conversation in DB
+    if (user) {
+      const { data: conv } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          emotional_state: emotion,
+        })
+        .select()
+        .single();
+
+      if (conv) {
+        setConversationId(conv.id);
+      }
+    }
     
     setTimeout(() => {
       const greeting = initialGreetings[Math.floor(Math.random() * initialGreetings.length)];
@@ -118,6 +192,10 @@ export function ChatInterface() {
         content: greeting,
         emotionalContext: emotion as any,
       });
+
+      if (user && conversationId) {
+        saveMessageToDb('assistant', greeting, conversationId);
+      }
     }, 500);
   };
 
@@ -127,11 +205,35 @@ export function ChatInterface() {
     const chat = currentChat || createNewChat();
     const userMessage = input.trim();
     setInput('');
+
+    // Check for crisis content
+    const crisisResult = detectCrisis(userMessage);
+    if (crisisResult.showResources) {
+      setShowCrisisResources(true);
+      setIsAbuse(crisisResult.isAbuse);
+
+      // Log crisis alert
+      if (user && conversationId) {
+        await supabase.from('crisis_alerts').insert({
+          user_id: user.id,
+          source_type: 'chat',
+          source_id: conversationId,
+          content: userMessage,
+          severity: crisisResult.severity,
+          keywords_matched: crisisResult.matchedKeywords,
+        });
+      }
+    }
     
     addMessage(chat.id, {
       role: 'user',
       content: userMessage,
     });
+
+    // Save user message to DB
+    if (user && conversationId) {
+      await saveMessageToDb('user', userMessage, conversationId);
+    }
 
     setIsTyping(true);
     setStreamingContent('');
@@ -153,12 +255,28 @@ export function ChatInterface() {
         assistantContent += chunk;
         setStreamingContent(assistantContent);
       },
-      onDone: () => {
+      onDone: async () => {
         if (assistantContent) {
           addMessage(chat.id, {
             role: 'assistant',
             content: assistantContent,
           });
+
+          // Save assistant message to DB
+          if (user && conversationId) {
+            await saveMessageToDb('assistant', assistantContent, conversationId);
+            
+            // Update conversation title from first user message
+            if (chat.messages.length <= 2) {
+              await supabase
+                .from('conversations')
+                .update({ 
+                  title: userMessage.slice(0, 50) + (userMessage.length > 50 ? '...' : ''),
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', conversationId);
+            }
+          }
         }
         setStreamingContent('');
         setIsTyping(false);
@@ -188,6 +306,16 @@ export function ChatInterface() {
 
   return (
     <div className="h-full flex flex-col">
+      {/* Crisis Resources Banner */}
+      {showCrisisResources && (
+        <div className="p-4 pb-0">
+          <CrisisResourcesBanner
+            isAbuse={isAbuse}
+            onDismiss={() => setShowCrisisResources(false)}
+          />
+        </div>
+      )}
+
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {currentChat?.messages.map((message, index) => (
@@ -240,7 +368,7 @@ export function ChatInterface() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground text-center mt-2">
-            Everything you share here is private and secure 💚
+            Everything you share here is private and secure
           </p>
         </div>
       </div>

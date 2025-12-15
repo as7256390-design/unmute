@@ -5,18 +5,22 @@ import {
   ClipboardList, 
   BarChart3, 
   Plus,
-  Home,
   BookHeart,
   MessageSquare,
   Sparkles,
   PanelLeftClose,
   PanelLeft,
   Settings,
-  HelpCircle
+  HelpCircle,
+  LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
@@ -46,6 +50,12 @@ export function AppSidebar() {
     userType,
     setUserType
   } = useApp();
+  const { signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success('Signed out successfully');
+  };
 
   const handleNewChat = () => {
     createNewChat();
@@ -230,6 +240,9 @@ export function AppSidebar() {
           </Button>
           <Button variant="ghost" size="icon-sm">
             <HelpCircle className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon-sm" onClick={handleSignOut} title="Sign out">
+            <LogOut className="h-4 w-4" />
           </Button>
         </div>
       </div>
