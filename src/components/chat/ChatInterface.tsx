@@ -1,50 +1,128 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Heart, RefreshCw } from 'lucide-react';
+import { Send, Sparkles, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useApp } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
 import { EmotionalCheckIn } from './EmotionalCheckIn';
 import { Message } from '@/types';
+import { toast } from 'sonner';
 
-const initialResponses = [
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+
+const initialGreetings = [
   "I hear you, and I'm really glad you reached out. Whatever you're going through, you don't have to face it alone. Can you tell me more about what's on your mind?",
   "Thank you for trusting me with this. Your feelings are completely valid. Let's take this one step at a time. What's weighing on you the most right now?",
   "I'm here to listen without judgment. You're brave for opening up. What would feel most helpful for you right now - just venting, or exploring some ways to cope?",
 ];
 
+type ChatMessage = { role: "user" | "assistant"; content: string };
+
+async function streamChat({
+  messages,
+  emotionalState,
+  onDelta,
+  onDone,
+  onError,
+}: {
+  messages: ChatMessage[];
+  emotionalState?: any;
+  onDelta: (deltaText: string) => void;
+  onDone: () => void;
+  onError: (error: string) => void;
+}) {
+  try {
+    const resp = await fetch(CHAT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ messages, emotionalState }),
+    });
+
+    if (!resp.ok) {
+      const errorData = await resp.json().catch(() => ({}));
+      onError(errorData.error || "Failed to get response");
+      return;
+    }
+
+    if (!resp.body) {
+      onError("No response stream");
+      return;
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let textBuffer = "";
+    let streamDone = false;
+
+    while (!streamDone) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      textBuffer += decoder.decode(value, { stream: true });
+
+      let newlineIndex: number;
+      while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+        let line = textBuffer.slice(0, newlineIndex);
+        textBuffer = textBuffer.slice(newlineIndex + 1);
+
+        if (line.endsWith("\r")) line = line.slice(0, -1);
+        if (line.startsWith(":") || line.trim() === "") continue;
+        if (!line.startsWith("data: ")) continue;
+
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === "[DONE]") {
+          streamDone = true;
+          break;
+        }
+
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          if (content) onDelta(content);
+        } catch {
+          textBuffer = line + "\n" + textBuffer;
+          break;
+        }
+      }
+    }
+
+    onDone();
+  } catch (error) {
+    onError(error instanceof Error ? error.message : "Connection failed");
+  }
+}
+
 export function ChatInterface() {
   const { currentChat, addMessage, createNewChat, currentEmotionalState } = useApp();
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [streamingContent, setStreamingContent] = useState('');
   const [showCheckIn, setShowCheckIn] = useState(!currentChat || currentChat.messages.length === 0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [currentChat?.messages]);
+  }, [currentChat?.messages, streamingContent]);
 
   const handleCheckInComplete = (emotion: string, supportType: string) => {
     const chat = currentChat || createNewChat();
     setShowCheckIn(false);
     
-    // Add system context
-    const systemMessage = `You're feeling ${emotion}. I'm here to support you.`;
-    
-    // Simulate AI greeting
     setTimeout(() => {
-      const greeting = initialResponses[Math.floor(Math.random() * initialResponses.length)];
+      const greeting = initialGreetings[Math.floor(Math.random() * initialGreetings.length)];
       addMessage(chat.id, {
         role: 'assistant',
         content: greeting,
         emotionalContext: emotion as any,
       });
-    }, 1000);
+    }, 500);
   };
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isTyping) return;
     
     const chat = currentChat || createNewChat();
     const userMessage = input.trim();
@@ -56,22 +134,41 @@ export function ChatInterface() {
     });
 
     setIsTyping(true);
-    
-    // Simulate AI response (this would be replaced with actual AI call)
-    setTimeout(() => {
-      const responses = [
-        "I understand how difficult that must be. It takes courage to share these feelings. What you're experiencing is more common than you might think, and there are ways to work through this together.",
-        "Thank you for opening up about this. Your feelings are valid, and it's okay to not be okay sometimes. Would you like to explore what might be contributing to these feelings?",
-        "I hear the pain in your words, and I want you to know that reaching out was a strong first step. Let's think about some small things that might help you feel even a little bit better today.",
-        "You're not alone in feeling this way. Many students go through similar struggles. The important thing is that you're here, and you're talking about it. What do you think would help you most right now?",
-      ];
-      
-      addMessage(chat.id, {
-        role: 'assistant',
-        content: responses[Math.floor(Math.random() * responses.length)],
-      });
-      setIsTyping(false);
-    }, 1500 + Math.random() * 1000);
+    setStreamingContent('');
+
+    // Build message history for AI (filter out system messages)
+    const chatMessages: ChatMessage[] = [
+      ...(chat.messages || [])
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+      { role: 'user' as const, content: userMessage }
+    ];
+
+    let assistantContent = '';
+
+    await streamChat({
+      messages: chatMessages,
+      emotionalState: currentEmotionalState,
+      onDelta: (chunk) => {
+        assistantContent += chunk;
+        setStreamingContent(assistantContent);
+      },
+      onDone: () => {
+        if (assistantContent) {
+          addMessage(chat.id, {
+            role: 'assistant',
+            content: assistantContent,
+          });
+        }
+        setStreamingContent('');
+        setIsTyping(false);
+      },
+      onError: (error) => {
+        toast.error(error);
+        setStreamingContent('');
+        setIsTyping(false);
+      },
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -102,12 +199,16 @@ export function ChatInterface() {
             <div className="w-8 h-8 rounded-full gradient-hero flex items-center justify-center flex-shrink-0">
               <Sparkles className="h-4 w-4 text-primary-foreground" />
             </div>
-            <div className="glass rounded-2xl rounded-tl-md px-4 py-3">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-              </div>
+            <div className="glass rounded-2xl rounded-tl-md px-4 py-3 max-w-[70%]">
+              {streamingContent ? (
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{streamingContent}</p>
+              ) : (
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              )}
             </div>
           </div>
         )}
