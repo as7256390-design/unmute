@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { Chat, Message, EmotionalState, UserProfile } from '@/types';
 
+type ViewType = 'chat' | 'emotional-form' | 'phq9' | 'assessments' | 'support-rooms' | 'wall' | 'journal' | 'dashboard' | 'parent' | 'onboarding' | 'mood-tracker' | 'wellness' | 'alignment';
+
 interface AppContextType {
   // Chat state
   chats: Chat[];
@@ -22,8 +24,8 @@ interface AppContextType {
   setUserType: (type: 'student' | 'parent' | null) => void;
   
   // Navigation
-  currentView: 'chat' | 'emotional-form' | 'phq9' | 'assessments' | 'support-rooms' | 'wall' | 'journal' | 'dashboard' | 'parent' | 'onboarding';
-  setCurrentView: (view: 'chat' | 'emotional-form' | 'phq9' | 'assessments' | 'support-rooms' | 'wall' | 'journal' | 'dashboard' | 'parent' | 'onboarding') => void;
+  currentView: ViewType;
+  setCurrentView: (view: ViewType) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -35,7 +37,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [currentEmotionalState, setCurrentEmotionalState] = useState<EmotionalState | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [userType, setUserType] = useState<'student' | 'parent' | null>(null);
-  const [currentView, setCurrentView] = useState<'chat' | 'emotional-form' | 'phq9' | 'assessments' | 'support-rooms' | 'wall' | 'journal' | 'dashboard' | 'parent' | 'onboarding'>('onboarding');
+  const [currentView, setCurrentView] = useState<ViewType>('onboarding');
 
   const createNewChat = useCallback(() => {
     const newChat: Chat = {
