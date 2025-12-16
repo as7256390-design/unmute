@@ -6,7 +6,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { ChatInterface } from '@/components/chat/ChatInterface';
 import { EmotionalProfileForm } from '@/components/forms/EmotionalProfileForm';
-import { PHQ9Form } from '@/components/forms/PHQ9Form';
+import { AssessmentHub } from '@/components/forms/AssessmentHub';
 import { SupportRooms } from '@/components/support/SupportRooms';
 import { SupportWall } from '@/components/support/SupportWall';
 import { Journal } from '@/components/journal/Journal';
@@ -48,8 +48,9 @@ const Index = () => {
         return <ChatInterface />;
       case 'emotional-form':
         return <EmotionalProfileForm />;
+      case 'assessments':
       case 'phq9':
-        return <PHQ9Form />;
+        return <AssessmentHub />;
       case 'support-rooms':
         return <SupportRooms />;
       case 'wall':

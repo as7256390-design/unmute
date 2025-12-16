@@ -32,7 +32,7 @@ const mainNavItems = [
 
 const toolsNavItems = [
   { id: 'emotional-form', label: 'Emotional Profile', icon: ClipboardList, description: 'Deep self-assessment' },
-  { id: 'phq9', label: 'PHQ-9 Screening', icon: Sparkles, description: 'Mental health check' },
+  { id: 'assessments', label: 'Mental Health Check', icon: Sparkles, description: 'PHQ-9 & GAD-7' },
 ];
 
 export function AppSidebar() {
