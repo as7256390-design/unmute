@@ -7,16 +7,14 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const phq9Questions = [
-  "Little interest or pleasure in doing things",
-  "Feeling down, depressed, or hopeless",
-  "Trouble falling or staying asleep, or sleeping too much",
-  "Feeling tired or having little energy",
-  "Poor appetite or overeating",
-  "Feeling bad about yourself — or that you are a failure or have let yourself or your family down",
-  "Trouble concentrating on things, such as reading the newspaper or watching television",
-  "Moving or speaking so slowly that other people could have noticed? Or the opposite — being so fidgety or restless that you have been moving around a lot more than usual",
-  "Thoughts that you would be better off dead, or of hurting yourself in some way",
+const gad7Questions = [
+  "Feeling nervous, anxious, or on edge",
+  "Not being able to stop or control worrying",
+  "Worrying too much about different things",
+  "Trouble relaxing",
+  "Being so restless that it's hard to sit still",
+  "Becoming easily annoyed or irritable",
+  "Feeling afraid as if something awful might happen",
 ];
 
 const scoreOptions = [
@@ -39,13 +37,13 @@ function getScoreInterpretation(score: number): Interpretation {
     return {
       level: 'minimal',
       color: 'safe',
-      message: 'Minimal Depression',
-      description: "You're showing very few signs of depression. This is a healthy emotional state.",
+      message: 'Minimal Anxiety',
+      description: "You're experiencing very few anxiety symptoms. This is a healthy range.",
       recommendations: [
-        "Continue your positive habits and routines",
-        "Stay connected with people who support you",
-        "Practice gratitude and mindfulness",
-        "Maintain regular sleep and exercise patterns"
+        "Continue your current self-care practices",
+        "Practice mindfulness to maintain emotional balance",
+        "Stay connected with friends and family",
+        "Keep a regular sleep and exercise routine"
       ]
     };
   }
@@ -53,14 +51,14 @@ function getScoreInterpretation(score: number): Interpretation {
     return {
       level: 'mild',
       color: 'hope',
-      message: 'Mild Depression',
-      description: "You're experiencing some symptoms that are worth paying attention to.",
+      message: 'Mild Anxiety',
+      description: "You're experiencing some anxiety symptoms that are worth monitoring.",
       recommendations: [
-        "Talk to someone you trust about how you're feeling",
-        "Try to maintain a regular daily routine",
-        "Spend time outdoors and get some physical activity",
-        "Limit alcohol and avoid recreational drugs",
-        "Consider using our peer support features"
+        "Try breathing exercises when feeling stressed",
+        "Consider talking to a peer listener about your worries",
+        "Limit caffeine and screen time before bed",
+        "Practice grounding techniques (5-4-3-2-1 method)",
+        "Journal your thoughts to identify triggers"
       ]
     };
   }
@@ -68,56 +66,44 @@ function getScoreInterpretation(score: number): Interpretation {
     return {
       level: 'moderate',
       color: 'warning',
-      message: 'Moderate Depression',
-      description: "Your symptoms are significant and may be affecting your daily life.",
+      message: 'Moderate Anxiety',
+      description: "Your anxiety symptoms are significant and may be affecting your daily life.",
       recommendations: [
         "Connect with a trained listener or counselor",
-        "Establish a daily self-care routine",
+        "Practice daily relaxation techniques",
+        "Consider structured anxiety management programs",
         "Break tasks into smaller, manageable steps",
-        "Reach out to friends and avoid isolation",
-        "Consider professional support or therapy",
-        "Track your mood to identify patterns"
-      ]
-    };
-  }
-  if (score <= 19) {
-    return {
-      level: 'moderately-severe',
-      color: 'accent',
-      message: 'Moderately Severe Depression',
-      description: "Your symptoms are quite high. Professional support is strongly recommended.",
-      recommendations: [
-        "Speak with a mental health professional soon",
-        "Connect with a listener for immediate support",
-        "Inform a trusted person about how you're feeling",
-        "Focus on basic self-care (sleep, nutrition, hygiene)",
-        "Avoid making major decisions right now",
-        "Use crisis resources if needed"
+        "Reach out to trusted friends or family",
+        "Limit news and social media if triggering"
       ]
     };
   }
   return {
     level: 'severe',
     color: 'destructive',
-    message: 'Severe Depression',
-    description: "Your symptoms indicate you need support. Please reach out to someone today.",
+    message: 'Severe Anxiety',
+    description: "Your anxiety symptoms are high and professional support is recommended.",
     recommendations: [
-      "Contact a mental health professional immediately",
-      "Call a crisis helpline if you're struggling",
-      "Tell someone you trust how you're feeling",
-      "Avoid being alone if possible",
-      "Focus only on getting through today",
-      "Remember: this feeling is temporary and help exists"
+      "Speak with a mental health professional soon",
+      "Connect with a listener for immediate support",
+      "Practice crisis coping strategies",
+      "Avoid isolating yourself - reach out to someone",
+      "Focus on basic self-care (sleep, food, water)",
+      "Consider calling a helpline if overwhelmed"
     ]
   };
 }
 
-export function PHQ9Form() {
+interface GAD7FormProps {
+  onComplete?: (score: number) => void;
+}
+
+export function GAD7Form({ onComplete }: GAD7FormProps) {
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<number[]>(new Array(9).fill(-1));
+  const [answers, setAnswers] = useState<number[]>(new Array(7).fill(-1));
   const [isComplete, setIsComplete] = useState(false);
 
-  const progress = ((currentQuestion + 1) / phq9Questions.length) * 100;
+  const progress = ((currentQuestion + 1) / gad7Questions.length) * 100;
   const totalScore = answers.reduce((sum, val) => sum + (val >= 0 ? val : 0), 0);
   const interpretation = getScoreInterpretation(totalScore);
 
@@ -128,10 +114,11 @@ export function PHQ9Form() {
   };
 
   const handleNext = () => {
-    if (currentQuestion < phq9Questions.length - 1) {
+    if (currentQuestion < gad7Questions.length - 1) {
       setCurrentQuestion(prev => prev + 1);
     } else {
       setIsComplete(true);
+      onComplete?.(totalScore);
     }
   };
 
@@ -143,12 +130,12 @@ export function PHQ9Form() {
 
   const handleReset = () => {
     setCurrentQuestion(0);
-    setAnswers(new Array(9).fill(-1));
+    setAnswers(new Array(7).fill(-1));
     setIsComplete(false);
   };
 
   if (isComplete) {
-    const isCritical = answers[8] >= 1; // Question 9 is about self-harm
+    const isSevere = interpretation.level === 'severe';
     
     return (
       <motion.div 
@@ -157,7 +144,7 @@ export function PHQ9Form() {
         className="max-w-2xl mx-auto p-6"
       >
         <div className="glass rounded-2xl p-8">
-          {isCritical ? (
+          {isSevere ? (
             <>
               <div className="text-center mb-6">
                 <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center mx-auto mb-4">
@@ -165,15 +152,15 @@ export function PHQ9Form() {
                 </div>
                 <h2 className="font-display text-2xl font-bold mb-2">We're Here For You</h2>
                 <p className="text-muted-foreground">
-                  We noticed you're going through a really difficult time. Your feelings matter, 
-                  and it's important to talk to someone who can help.
+                  Your anxiety levels are high, and that can feel really overwhelming. 
+                  You don't have to face this alone.
                 </p>
               </div>
               
               <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-6 mb-6">
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                   <Phone className="h-5 w-5" />
-                  Crisis Support Lines
+                  Immediate Support
                 </h3>
                 <div className="space-y-2 text-sm">
                   <p><strong>iCall:</strong> 9152987821</p>
@@ -202,36 +189,32 @@ export function PHQ9Form() {
                     "w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4",
                     interpretation.level === 'minimal' && "bg-safe/20",
                     interpretation.level === 'mild' && "bg-hope/20",
-                    interpretation.level === 'moderate' && "bg-warning/20",
-                    interpretation.level === 'moderately-severe' && "bg-accent/20",
-                    interpretation.level === 'severe' && "bg-destructive/20"
+                    interpretation.level === 'moderate' && "bg-warning/20"
                   )}
                 >
                   <span className="text-3xl font-display font-bold">{totalScore}</span>
                 </motion.div>
                 <h2 className="font-display text-2xl font-bold mb-1">{interpretation.message}</h2>
-                <p className="text-muted-foreground text-sm">Score: {totalScore} out of 27</p>
+                <p className="text-muted-foreground text-sm">Score: {totalScore} out of 21</p>
               </div>
 
-              {/* Score Breakdown Visual */}
+              {/* Score Breakdown */}
               <div className="mb-6">
                 <div className="flex justify-between text-xs text-muted-foreground mb-2">
                   <span>Minimal</span>
                   <span>Mild</span>
                   <span>Moderate</span>
-                  <span>Mod-Severe</span>
                   <span>Severe</span>
                 </div>
                 <div className="h-3 rounded-full bg-muted overflow-hidden flex">
-                  <div className="bg-safe w-[18%]" />
-                  <div className="bg-hope w-[19%]" />
-                  <div className="bg-warning w-[19%]" />
-                  <div className="bg-accent w-[19%]" />
-                  <div className="bg-destructive w-[25%]" />
+                  <div className="bg-safe w-[24%]" />
+                  <div className="bg-hope w-[24%]" />
+                  <div className="bg-warning w-[24%]" />
+                  <div className="bg-destructive w-[28%]" />
                 </div>
                 <div 
                   className="w-3 h-3 rounded-full bg-foreground -mt-3 border-2 border-background transition-all"
-                  style={{ marginLeft: `${Math.min((totalScore / 27) * 100, 97)}%` }}
+                  style={{ marginLeft: `${Math.min((totalScore / 21) * 100, 97)}%` }}
                 />
               </div>
 
@@ -259,7 +242,7 @@ export function PHQ9Form() {
                   <Shield className="h-4 w-4 flex-shrink-0 mt-0.5" />
                   <span>
                     This screening is not a clinical diagnosis. It's designed to help you understand 
-                    your feelings and guide you toward appropriate support.
+                    your anxiety levels and guide you toward appropriate support.
                   </span>
                 </p>
               </div>
@@ -271,7 +254,7 @@ export function PHQ9Form() {
                 </Button>
                 <Button variant="secondary" size="lg" className="flex-1 gap-2">
                   <BookOpen className="h-4 w-4" />
-                  View Resources
+                  Learn Coping Skills
                 </Button>
               </div>
 
@@ -289,7 +272,7 @@ export function PHQ9Form() {
     <div className="max-w-2xl mx-auto p-6">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="font-display text-3xl font-bold mb-2">PHQ-9 Screening</h1>
+        <h1 className="font-display text-3xl font-bold mb-2">GAD-7 Anxiety Screening</h1>
         <p className="text-muted-foreground">
           Over the <strong>last 2 weeks</strong>, how often have you been bothered by the following?
         </p>
@@ -299,9 +282,9 @@ export function PHQ9Form() {
       <div className="glass rounded-xl p-4 mb-6 flex items-start gap-3">
         <Shield className="h-5 w-5 text-safe flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-medium">Confidential Assessment</p>
+          <p className="text-sm font-medium">Your answers are confidential</p>
           <p className="text-xs text-muted-foreground">
-            Your responses are private and help us provide better support.
+            This helps us understand how you're feeling and provide better support.
           </p>
         </div>
       </div>
@@ -309,7 +292,7 @@ export function PHQ9Form() {
       {/* Progress */}
       <div className="mb-6">
         <div className="flex justify-between text-sm text-muted-foreground mb-2">
-          <span>Question {currentQuestion + 1} of {phq9Questions.length}</span>
+          <span>Question {currentQuestion + 1} of {gad7Questions.length}</span>
           <span>{Math.round(progress)}%</span>
         </div>
         <Progress value={progress} className="h-2" />
@@ -324,7 +307,7 @@ export function PHQ9Form() {
           exit={{ opacity: 0, x: -20 }}
           className="glass rounded-2xl p-6 mb-6"
         >
-          <p className="text-lg font-medium mb-6">{phq9Questions[currentQuestion]}</p>
+          <p className="text-lg font-medium mb-6">{gad7Questions[currentQuestion]}</p>
           
           <RadioGroup
             value={answers[currentQuestion]?.toString()}
@@ -335,11 +318,11 @@ export function PHQ9Form() {
               <div key={option.value}>
                 <RadioGroupItem 
                   value={option.value.toString()} 
-                  id={`phq-option-${option.value}`} 
+                  id={`gad-option-${option.value}`} 
                   className="peer sr-only" 
                 />
                 <Label
-                  htmlFor={`phq-option-${option.value}`}
+                  htmlFor={`gad-option-${option.value}`}
                   className="flex items-center gap-4 rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all"
                 >
                   <span className="w-8 h-8 rounded-full border-2 border-current flex items-center justify-center text-sm font-medium">
@@ -353,15 +336,6 @@ export function PHQ9Form() {
               </div>
             ))}
           </RadioGroup>
-
-          {currentQuestion === 8 && (
-            <div className="mt-6 p-4 rounded-xl bg-support/10 border border-support/30">
-              <p className="text-sm text-muted-foreground">
-                <strong>Note:</strong> If you're having thoughts of hurting yourself, please know that 
-                help is available. You can talk to a listener anytime, and we're here for you.
-              </p>
-            </div>
-          )}
         </motion.div>
       </AnimatePresence>
 
@@ -382,7 +356,7 @@ export function PHQ9Form() {
           disabled={answers[currentQuestion] < 0}
           className="gap-2"
         >
-          {currentQuestion === phq9Questions.length - 1 ? 'View Results' : 'Next'}
+          {currentQuestion === gad7Questions.length - 1 ? 'View Results' : 'Next'}
           <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
