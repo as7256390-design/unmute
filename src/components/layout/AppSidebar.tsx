@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { 
   MessageCircle, 
   Users, 
@@ -12,7 +13,10 @@ import {
   PanelLeft,
   Settings,
   HelpCircle,
-  LogOut
+  LogOut,
+  TrendingUp,
+  Wind,
+  UserCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/contexts/AppContext';
@@ -21,6 +25,7 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { SettingsModal } from '@/components/settings/SettingsModal';
 
 const mainNavItems = [
   { id: 'chat', label: 'Chat', icon: MessageCircle, description: 'Talk to someone' },
@@ -31,8 +36,11 @@ const mainNavItems = [
 ];
 
 const toolsNavItems = [
-  { id: 'emotional-form', label: 'Emotional Profile', icon: ClipboardList, description: 'Deep self-assessment' },
+  { id: 'mood-tracker', label: 'Mood Tracker', icon: TrendingUp, description: 'Daily mood logs' },
+  { id: 'wellness', label: 'Wellness Tools', icon: Wind, description: 'Breathing & more' },
+  { id: 'alignment', label: 'Family Alignment', icon: UserCheck, description: 'Parent-child gap' },
   { id: 'assessments', label: 'Mental Health Check', icon: Sparkles, description: 'PHQ-9 & GAD-7' },
+  { id: 'emotional-form', label: 'Emotional Profile', icon: ClipboardList, description: 'Deep self-assessment' },
 ];
 
 export function AppSidebar() {
@@ -49,6 +57,7 @@ export function AppSidebar() {
     setUserType
   } = useApp();
   const { signOut } = useAuth();
+  const [showSettings, setShowSettings] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -233,10 +242,10 @@ export function AppSidebar() {
           <span>Parent Section</span>
         </Button>
         <div className="flex gap-2">
-          <Button variant="ghost" size="icon-sm">
+          <Button variant="ghost" size="icon-sm" onClick={() => setShowSettings(true)}>
             <Settings className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon-sm">
+          <Button variant="ghost" size="icon-sm" onClick={() => toast.info('Help center coming soon!')}>
             <HelpCircle className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon-sm" onClick={handleSignOut} title="Sign out">
@@ -244,6 +253,8 @@ export function AppSidebar() {
           </Button>
         </div>
       </div>
+
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }

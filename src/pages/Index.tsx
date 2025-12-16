@@ -12,6 +12,10 @@ import { SupportWall } from '@/components/support/SupportWall';
 import { Journal } from '@/components/journal/Journal';
 import { GrowthDashboard } from '@/components/dashboard/GrowthDashboard';
 import { ParentInterface } from '@/components/parent/ParentInterface';
+import { MoodTracker } from '@/components/wellness/MoodTracker';
+import { WellnessTools } from '@/components/wellness/WellnessTools';
+import { AlignmentDashboard } from '@/components/dashboard/AlignmentDashboard';
+import { SOSButton } from '@/components/crisis/SOSButton';
 import { Loader2 } from 'lucide-react';
 
 const Index = () => {
@@ -61,6 +65,12 @@ const Index = () => {
         return <GrowthDashboard />;
       case 'parent':
         return <ParentInterface />;
+      case 'mood-tracker':
+        return <MoodTracker />;
+      case 'wellness':
+        return <WellnessTools />;
+      case 'alignment':
+        return <AlignmentDashboard />;
       default:
         return <ChatInterface />;
     }
@@ -71,6 +81,7 @@ const Index = () => {
       <div className="h-screen overflow-y-auto">
         {renderContent()}
       </div>
+      <SOSButton />
     </MainLayout>
   );
 };
