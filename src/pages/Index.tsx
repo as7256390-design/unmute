@@ -22,6 +22,7 @@ import { PeerListenerTraining } from '@/components/training/PeerListenerTraining
 import { RelaxationContent } from '@/components/relaxation/RelaxationContent';
 import { InstitutionDashboard } from '@/components/institution/InstitutionDashboard';
 import { SOSButton } from '@/components/crisis/SOSButton';
+import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { Loader2 } from 'lucide-react';
 
 const Index = () => {
@@ -99,6 +100,7 @@ const Index = () => {
         {renderContent()}
       </div>
       <SOSButton />
+      <InstallPrompt />
     </MainLayout>
   );
 };
