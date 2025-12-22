@@ -50,7 +50,9 @@ export function SupportRooms() {
       .order('name');
 
     if (error) {
-      console.error('Error fetching rooms:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error fetching rooms:', error);
+      }
       toast.error('Failed to load rooms');
     } else {
       setRooms(data || []);
@@ -100,7 +102,9 @@ export function SupportRooms() {
     });
 
     if (error) {
-      console.error('Error joining room:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error joining room:', error);
+      }
       toast.error('Failed to join room');
     } else {
       setJoinedRooms((prev) => new Set([...prev, room.id]));
