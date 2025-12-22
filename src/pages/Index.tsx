@@ -15,6 +15,12 @@ import { ParentInterface } from '@/components/parent/ParentInterface';
 import { MoodTracker } from '@/components/wellness/MoodTracker';
 import { WellnessTools } from '@/components/wellness/WellnessTools';
 import { AlignmentDashboard } from '@/components/dashboard/AlignmentDashboard';
+import { GuidedPrograms } from '@/components/programs/GuidedPrograms';
+import { GamificationHub } from '@/components/gamification/GamificationHub';
+import { CounselorBooking } from '@/components/counselor/CounselorBooking';
+import { PeerListenerTraining } from '@/components/training/PeerListenerTraining';
+import { RelaxationContent } from '@/components/relaxation/RelaxationContent';
+import { InstitutionDashboard } from '@/components/institution/InstitutionDashboard';
 import { SOSButton } from '@/components/crisis/SOSButton';
 import { Loader2 } from 'lucide-react';
 
@@ -41,7 +47,6 @@ const Index = () => {
     return null;
   }
 
-  // Show onboarding for new users
   if (currentView === 'onboarding' && !userType) {
     return <OnboardingScreen />;
   }
@@ -71,6 +76,18 @@ const Index = () => {
         return <WellnessTools />;
       case 'alignment':
         return <AlignmentDashboard />;
+      case 'programs':
+        return <GuidedPrograms />;
+      case 'gamification':
+        return <GamificationHub />;
+      case 'counselor':
+        return <CounselorBooking />;
+      case 'training':
+        return <PeerListenerTraining />;
+      case 'relaxation':
+        return <RelaxationContent />;
+      case 'institution':
+        return <InstitutionDashboard />;
       default:
         return <ChatInterface />;
     }
