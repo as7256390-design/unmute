@@ -1,14 +1,28 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// Allowed origins for CORS - restrict to production and preview URLs
+const ALLOWED_ORIGINS = [
+  "https://lgfewsifdmhodjdxojck.lovableproject.com",
+  "https://lovable.dev",
+  "http://localhost:5173",
+  "http://localhost:8080",
+];
 
-// Pre-generated VAPID keys for web push notifications
-// These are ECDSA P-256 keys encoded in URL-safe base64
-const VAPID_PUBLIC_KEY = "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U";
-const VAPID_PRIVATE_KEY = "UUxI4O8-FbRouADVXc-hK3ltRAc8EPMgCNRKvSGZaR4";
+function getCorsHeaders(origin: string | null) {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed.replace(/:\d+$/, '')))
+    ? origin
+    : ALLOWED_ORIGINS[0];
+  
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  };
+}
+
+// VAPID keys loaded from environment secrets (no longer hardcoded)
+const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY") || "";
+const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY") || "";
 
 interface PushSubscription {
   endpoint: string;
@@ -56,12 +70,24 @@ async function sendWebPush(
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("Origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Validate VAPID keys are configured
+    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+      console.error("VAPID keys not configured in environment secrets");
+      return new Response(
+        JSON.stringify({ error: "Push notification service not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     
