@@ -60,7 +60,10 @@ export function SupportRoomChat({ room, onBack }: SupportRoomChatProps) {
         .limit(100);
 
       if (error) {
-        console.error('Error fetching messages:', error);
+        if (import.meta.env.DEV) {
+          console.error('Error fetching messages:', error);
+        }
+        toast.error('Unable to load messages. Please try again.');
       } else {
         setMessages(data || []);
       }
@@ -134,7 +137,9 @@ export function SupportRoomChat({ room, onBack }: SupportRoomChatProps) {
     });
 
     if (error) {
-      console.error('Error sending message:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error sending message:', error);
+      }
       toast.error('Failed to send message');
       setInput(content);
     }
