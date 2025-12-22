@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      badges: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          name: string
+          requirement_type: string
+          requirement_value: number
+          xp_reward: number | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          icon: string
+          id?: string
+          name: string
+          requirement_type: string
+          requirement_value: number
+          xp_reward?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          name?: string
+          requirement_type?: string
+          requirement_value?: number
+          xp_reward?: number | null
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           content: string
@@ -82,6 +118,133 @@ export type Database = {
         }
         Relationships: []
       }
+      counseling_sessions: {
+        Row: {
+          counselor_id: string
+          counselor_notes: string | null
+          created_at: string
+          duration_minutes: number | null
+          id: string
+          notes: string | null
+          scheduled_at: string
+          status: string | null
+          student_feedback: string | null
+          student_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          counselor_id: string
+          counselor_notes?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          notes?: string | null
+          scheduled_at: string
+          status?: string | null
+          student_feedback?: string | null
+          student_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          counselor_id?: string
+          counselor_notes?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          notes?: string | null
+          scheduled_at?: string
+          status?: string | null
+          student_feedback?: string | null
+          student_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "counseling_sessions_counselor_id_fkey"
+            columns: ["counselor_id"]
+            isOneToOne: false
+            referencedRelation: "counselors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      counselor_availability: {
+        Row: {
+          counselor_id: string
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_active: boolean | null
+          start_time: string
+        }
+        Insert: {
+          counselor_id: string
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_active?: boolean | null
+          start_time: string
+        }
+        Update: {
+          counselor_id?: string
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean | null
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "counselor_availability_counselor_id_fkey"
+            columns: ["counselor_id"]
+            isOneToOne: false
+            referencedRelation: "counselors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      counselors: {
+        Row: {
+          bio: string | null
+          created_at: string
+          experience_years: number | null
+          id: string
+          is_available: boolean | null
+          name: string
+          qualifications: string | null
+          session_duration_minutes: number | null
+          specialization: string[] | null
+          user_id: string
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          experience_years?: number | null
+          id?: string
+          is_available?: boolean | null
+          name: string
+          qualifications?: string | null
+          session_duration_minutes?: number | null
+          specialization?: string[] | null
+          user_id: string
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          experience_years?: number | null
+          id?: string
+          is_available?: boolean | null
+          name?: string
+          qualifications?: string | null
+          session_duration_minutes?: number | null
+          specialization?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       crisis_alerts: {
         Row: {
           content: string
@@ -121,6 +284,181 @@ export type Database = {
         }
         Relationships: []
       }
+      institution_members: {
+        Row: {
+          id: string
+          institution_id: string
+          joined_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          institution_id: string
+          joined_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          institution_id?: string
+          joined_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_members_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      institution_mood_stats: {
+        Row: {
+          avg_mood_score: number | null
+          created_at: string
+          crisis_alerts_count: number | null
+          date: string
+          id: string
+          institution_id: string
+          stress_high_count: number | null
+          stress_low_count: number | null
+          stress_medium_count: number | null
+          total_checkins: number | null
+        }
+        Insert: {
+          avg_mood_score?: number | null
+          created_at?: string
+          crisis_alerts_count?: number | null
+          date: string
+          id?: string
+          institution_id: string
+          stress_high_count?: number | null
+          stress_low_count?: number | null
+          stress_medium_count?: number | null
+          total_checkins?: number | null
+        }
+        Update: {
+          avg_mood_score?: number | null
+          created_at?: string
+          crisis_alerts_count?: number | null
+          date?: string
+          id?: string
+          institution_id?: string
+          stress_high_count?: number | null
+          stress_low_count?: number | null
+          stress_medium_count?: number | null
+          total_checkins?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_mood_stats_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      institutions: {
+        Row: {
+          admin_user_id: string
+          code: string
+          created_at: string
+          id: string
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          admin_user_id: string
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_user_id?: string
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      mood_logs: {
+        Row: {
+          created_at: string
+          energy_level: number | null
+          id: string
+          logged_at: string
+          mood_score: number
+          notes: string | null
+          stress_level: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          energy_level?: number | null
+          id?: string
+          logged_at?: string
+          mood_score: number
+          notes?: string | null
+          stress_level?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          energy_level?: number | null
+          id?: string
+          logged_at?: string
+          mood_score?: number
+          notes?: string | null
+          stress_level?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      peer_listeners: {
+        Row: {
+          certified_at: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          is_certified: boolean | null
+          rating: number | null
+          total_sessions: number | null
+          user_id: string
+        }
+        Insert: {
+          certified_at?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_certified?: boolean | null
+          rating?: number | null
+          total_sessions?: number | null
+          user_id: string
+        }
+        Update: {
+          certified_at?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_certified?: boolean | null
+          rating?: number | null
+          total_sessions?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -148,6 +486,95 @@ export type Database = {
           updated_at?: string
           user_id?: string
           user_type?: string | null
+        }
+        Relationships: []
+      }
+      program_days: {
+        Row: {
+          created_at: string
+          day_number: number
+          description: string
+          duration_minutes: number | null
+          exercise_content: Json
+          exercise_type: string
+          id: string
+          program_id: string
+          title: string
+          xp_reward: number | null
+        }
+        Insert: {
+          created_at?: string
+          day_number: number
+          description: string
+          duration_minutes?: number | null
+          exercise_content: Json
+          exercise_type: string
+          id?: string
+          program_id: string
+          title: string
+          xp_reward?: number | null
+        }
+        Update: {
+          created_at?: string
+          day_number?: number
+          description?: string
+          duration_minutes?: number | null
+          exercise_content?: Json
+          exercise_type?: string
+          id?: string
+          program_id?: string
+          title?: string
+          xp_reward?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_days_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "wellness_programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relaxation_content: {
+        Row: {
+          audio_url: string | null
+          category: string
+          content_text: string | null
+          created_at: string
+          description: string
+          duration_minutes: number | null
+          id: string
+          is_premium: boolean | null
+          play_count: number | null
+          thumbnail_url: string | null
+          title: string
+        }
+        Insert: {
+          audio_url?: string | null
+          category: string
+          content_text?: string | null
+          created_at?: string
+          description: string
+          duration_minutes?: number | null
+          id?: string
+          is_premium?: boolean | null
+          play_count?: number | null
+          thumbnail_url?: string | null
+          title: string
+        }
+        Update: {
+          audio_url?: string | null
+          category?: string
+          content_text?: string | null
+          created_at?: string
+          description?: string
+          duration_minutes?: number | null
+          id?: string
+          is_premium?: boolean | null
+          play_count?: number | null
+          thumbnail_url?: string | null
+          title?: string
         }
         Relationships: []
       }
@@ -242,6 +669,306 @@ export type Database = {
           created_at?: string
           description?: string
           emoji?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      training_modules: {
+        Row: {
+          badge_id: string | null
+          content: Json
+          created_at: string
+          description: string
+          duration_minutes: number | null
+          id: string
+          is_required: boolean | null
+          order_index: number
+          title: string
+        }
+        Insert: {
+          badge_id?: string | null
+          content: Json
+          created_at?: string
+          description: string
+          duration_minutes?: number | null
+          id?: string
+          is_required?: boolean | null
+          order_index: number
+          title: string
+        }
+        Update: {
+          badge_id?: string | null
+          content?: Json
+          created_at?: string
+          description?: string
+          duration_minutes?: number | null
+          id?: string
+          is_required?: boolean | null
+          order_index?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_modules_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_content_history: {
+        Row: {
+          completed: boolean | null
+          content_id: string
+          id: string
+          played_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          content_id: string
+          id?: string
+          played_at?: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          content_id?: string
+          id?: string
+          played_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_content_history_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "relaxation_content"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_day_completions: {
+        Row: {
+          completed_at: string
+          id: string
+          notes: string | null
+          program_day_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          id?: string
+          notes?: string | null
+          program_day_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          id?: string
+          notes?: string | null
+          program_day_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_day_completions_program_day_id_fkey"
+            columns: ["program_day_id"]
+            isOneToOne: false
+            referencedRelation: "program_days"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_gamification: {
+        Row: {
+          created_at: string
+          current_streak: number | null
+          id: string
+          last_activity_date: string | null
+          level: number | null
+          longest_streak: number | null
+          total_breathing_exercises: number | null
+          total_chat_sessions: number | null
+          total_checkins: number | null
+          total_grounding_exercises: number | null
+          total_journal_entries: number | null
+          updated_at: string
+          user_id: string
+          xp_points: number | null
+        }
+        Insert: {
+          created_at?: string
+          current_streak?: number | null
+          id?: string
+          last_activity_date?: string | null
+          level?: number | null
+          longest_streak?: number | null
+          total_breathing_exercises?: number | null
+          total_chat_sessions?: number | null
+          total_checkins?: number | null
+          total_grounding_exercises?: number | null
+          total_journal_entries?: number | null
+          updated_at?: string
+          user_id: string
+          xp_points?: number | null
+        }
+        Update: {
+          created_at?: string
+          current_streak?: number | null
+          id?: string
+          last_activity_date?: string | null
+          level?: number | null
+          longest_streak?: number | null
+          total_breathing_exercises?: number | null
+          total_chat_sessions?: number | null
+          total_checkins?: number | null
+          total_grounding_exercises?: number | null
+          total_journal_entries?: number | null
+          updated_at?: string
+          user_id?: string
+          xp_points?: number | null
+        }
+        Relationships: []
+      }
+      user_program_progress: {
+        Row: {
+          completed_at: string | null
+          current_day: number | null
+          id: string
+          program_id: string
+          started_at: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          current_day?: number | null
+          id?: string
+          program_id: string
+          started_at?: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          current_day?: number | null
+          id?: string
+          program_id?: string
+          started_at?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_program_progress_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "wellness_programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_training_progress: {
+        Row: {
+          completed_at: string | null
+          id: string
+          module_id: string
+          quiz_score: number | null
+          started_at: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: string
+          module_id: string
+          quiz_score?: number | null
+          started_at?: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          id?: string
+          module_id?: string
+          quiz_score?: number | null
+          started_at?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_training_progress_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "training_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wellness_programs: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          difficulty: string | null
+          duration_days: number
+          icon: string
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          difficulty?: string | null
+          duration_days: number
+          icon: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          difficulty?: string | null
+          duration_days?: number
+          icon?: string
           id?: string
           is_active?: boolean | null
           name?: string
