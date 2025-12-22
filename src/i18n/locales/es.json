@@ -1,0 +1,65 @@
+{
+  "app": {
+    "name": "Unmute",
+    "tagline": "Tu espacio seguro para ser escuchado"
+  },
+  "nav": {
+    "chat": "Chat",
+    "supportRooms": "Salas de Apoyo",
+    "supportWall": "Muro de Apoyo",
+    "journal": "Diario",
+    "myGrowth": "Mi Crecimiento",
+    "moodTracker": "Seguimiento de Ánimo",
+    "wellness": "Herramientas de Bienestar",
+    "alignment": "Alineación Familiar",
+    "assessments": "Evaluación de Salud Mental",
+    "emotionalProfile": "Perfil Emocional",
+    "parent": "Sección de Padres",
+    "programs": "Programas Guiados",
+    "gamification": "Logros",
+    "counselor": "Reservar Consejero",
+    "training": "Entrenamiento de Pares",
+    "relaxation": "Dormir y Relajar",
+    "institution": "Panel Institucional"
+  },
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "submit": "Enviar",
+    "next": "Siguiente",
+    "back": "Atrás",
+    "loading": "Cargando...",
+    "error": "Algo salió mal",
+    "success": "¡Éxito!",
+    "settings": "Configuración",
+    "help": "Ayuda",
+    "signOut": "Cerrar Sesión",
+    "newConversation": "Nueva Conversación"
+  },
+  "chat": {
+    "placeholder": "Escribe tu mensaje...",
+    "send": "Enviar",
+    "thinking": "Pensando...",
+    "welcome": "¡Hola! Estoy aquí para escucharte y apoyarte. ¿Cómo te sientes hoy?"
+  },
+  "mood": {
+    "title": "¿Cómo te sientes?",
+    "excellent": "Excelente",
+    "good": "Bien",
+    "okay": "Regular",
+    "notGreat": "No muy bien",
+    "struggling": "Luchando"
+  },
+  "wellness": {
+    "breathing": "Ejercicios de Respiración",
+    "grounding": "Técnicas de Anclaje",
+    "meditation": "Meditación"
+  },
+  "onboarding": {
+    "welcome": "Bienvenido a Unmute",
+    "studentTitle": "Soy Estudiante",
+    "studentDesc": "Obtén apoyo, rastrea tu bienestar mental y conecta con compañeros",
+    "parentTitle": "Soy Padre/Madre",
+    "parentDesc": "Apoya el viaje de salud mental de tu hijo con información y herramientas"
+  }
+}

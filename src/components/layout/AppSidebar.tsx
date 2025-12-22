@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   MessageCircle, 
   Users, 
@@ -16,7 +17,13 @@ import {
   LogOut,
   TrendingUp,
   Wind,
-  UserCheck
+  UserCheck,
+  Target,
+  Trophy,
+  Calendar,
+  GraduationCap,
+  Moon,
+  Building2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/contexts/AppContext';
@@ -26,6 +33,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { SettingsModal } from '@/components/settings/SettingsModal';
+import { LanguageSelector } from '@/components/settings/LanguageSelector';
 
 const mainNavItems = [
   { id: 'chat', label: 'Chat', icon: MessageCircle, description: 'Talk to someone' },
@@ -33,14 +41,23 @@ const mainNavItems = [
   { id: 'wall', label: 'Support Wall', icon: Heart, description: 'Anonymous sharing' },
   { id: 'journal', label: 'Journal', icon: BookHeart, description: 'Private reflection' },
   { id: 'dashboard', label: 'My Growth', icon: BarChart3, description: 'Track progress' },
+  { id: 'gamification', label: 'Achievements', icon: Trophy, description: 'Badges & XP' },
 ];
 
 const toolsNavItems = [
   { id: 'mood-tracker', label: 'Mood Tracker', icon: TrendingUp, description: 'Daily mood logs' },
   { id: 'wellness', label: 'Wellness Tools', icon: Wind, description: 'Breathing & more' },
+  { id: 'programs', label: 'Guided Programs', icon: Target, description: 'Structured wellness' },
+  { id: 'relaxation', label: 'Sleep & Relax', icon: Moon, description: 'Calm content' },
   { id: 'alignment', label: 'Family Alignment', icon: UserCheck, description: 'Parent-child gap' },
   { id: 'assessments', label: 'Mental Health Check', icon: Sparkles, description: 'PHQ-9 & GAD-7' },
   { id: 'emotional-form', label: 'Emotional Profile', icon: ClipboardList, description: 'Deep self-assessment' },
+];
+
+const professionalNavItems = [
+  { id: 'counselor', label: 'Book Counselor', icon: Calendar, description: 'Schedule session' },
+  { id: 'training', label: 'Peer Training', icon: GraduationCap, description: 'Become a listener' },
+  { id: 'institution', label: 'Institution', icon: Building2, description: 'Admin dashboard' },
 ];
 
 export function AppSidebar() {
@@ -197,6 +214,22 @@ export function AppSidebar() {
         <div className="space-y-1 mb-4">
           <p className="text-xs font-medium text-muted-foreground px-2 py-2">Tools</p>
           {toolsNavItems.map(item => (
+            <Button
+              key={item.id}
+              variant={currentView === item.id ? 'soft' : 'ghost'}
+              className="w-full justify-start gap-3 h-10"
+              onClick={() => handleNavClick(item.id)}
+            >
+              <item.icon className="h-4 w-4" />
+              <span>{item.label}</span>
+            </Button>
+          ))}
+        </div>
+
+        {/* Professional */}
+        <div className="space-y-1 mb-4">
+          <p className="text-xs font-medium text-muted-foreground px-2 py-2">Professional</p>
+          {professionalNavItems.map(item => (
             <Button
               key={item.id}
               variant={currentView === item.id ? 'soft' : 'ghost'}

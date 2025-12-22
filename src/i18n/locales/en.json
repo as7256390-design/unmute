@@ -1,0 +1,65 @@
+{
+  "app": {
+    "name": "Unmute",
+    "tagline": "Your safe space to be heard"
+  },
+  "nav": {
+    "chat": "Chat",
+    "supportRooms": "Support Rooms",
+    "supportWall": "Support Wall",
+    "journal": "Journal",
+    "myGrowth": "My Growth",
+    "moodTracker": "Mood Tracker",
+    "wellness": "Wellness Tools",
+    "alignment": "Family Alignment",
+    "assessments": "Mental Health Check",
+    "emotionalProfile": "Emotional Profile",
+    "parent": "Parent Section",
+    "programs": "Guided Programs",
+    "gamification": "Achievements",
+    "counselor": "Book Counselor",
+    "training": "Peer Training",
+    "relaxation": "Sleep & Relax",
+    "institution": "Institution Dashboard"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "next": "Next",
+    "back": "Back",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "success": "Success!",
+    "settings": "Settings",
+    "help": "Help",
+    "signOut": "Sign Out",
+    "newConversation": "New Conversation"
+  },
+  "chat": {
+    "placeholder": "Type your message...",
+    "send": "Send",
+    "thinking": "Thinking...",
+    "welcome": "Hi there! I'm here to listen and support you. How are you feeling today?"
+  },
+  "mood": {
+    "title": "How are you feeling?",
+    "excellent": "Excellent",
+    "good": "Good",
+    "okay": "Okay",
+    "notGreat": "Not Great",
+    "struggling": "Struggling"
+  },
+  "wellness": {
+    "breathing": "Breathing Exercises",
+    "grounding": "Grounding Techniques",
+    "meditation": "Meditation"
+  },
+  "onboarding": {
+    "welcome": "Welcome to Unmute",
+    "studentTitle": "I'm a Student",
+    "studentDesc": "Get support, track your mental wellness, and connect with peers",
+    "parentTitle": "I'm a Parent",
+    "parentDesc": "Support your child's mental health journey with insights and tools"
+  }
+}

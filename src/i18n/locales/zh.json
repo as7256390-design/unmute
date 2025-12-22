@@ -1,0 +1,65 @@
+{
+  "app": {
+    "name": "Unmute",
+    "tagline": "您被倾听的安全空间"
+  },
+  "nav": {
+    "chat": "聊天",
+    "supportRooms": "支持室",
+    "supportWall": "支持墙",
+    "journal": "日记",
+    "myGrowth": "我的成长",
+    "moodTracker": "情绪追踪",
+    "wellness": "健康工具",
+    "alignment": "家庭协调",
+    "assessments": "心理健康检查",
+    "emotionalProfile": "情感档案",
+    "parent": "家长区",
+    "programs": "引导计划",
+    "gamification": "成就",
+    "counselor": "预约咨询师",
+    "training": "同伴培训",
+    "relaxation": "睡眠与放松",
+    "institution": "机构仪表板"
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "submit": "提交",
+    "next": "下一步",
+    "back": "返回",
+    "loading": "加载中...",
+    "error": "出了点问题",
+    "success": "成功！",
+    "settings": "设置",
+    "help": "帮助",
+    "signOut": "退出登录",
+    "newConversation": "新对话"
+  },
+  "chat": {
+    "placeholder": "输入您的消息...",
+    "send": "发送",
+    "thinking": "思考中...",
+    "welcome": "你好！我在这里倾听和支持你。你今天感觉怎么样？"
+  },
+  "mood": {
+    "title": "你感觉如何？",
+    "excellent": "非常好",
+    "good": "好",
+    "okay": "还行",
+    "notGreat": "不太好",
+    "struggling": "挣扎中"
+  },
+  "wellness": {
+    "breathing": "呼吸练习",
+    "grounding": "接地技术",
+    "meditation": "冥想"
+  },
+  "onboarding": {
+    "welcome": "欢迎来到 Unmute",
+    "studentTitle": "我是学生",
+    "studentDesc": "获得支持，追踪您的心理健康，与同龄人建立联系",
+    "parentTitle": "我是家长",
+    "parentDesc": "通过洞察和工具支持您孩子的心理健康之旅"
+  }
+}
