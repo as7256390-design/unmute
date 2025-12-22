@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { X, Bell, Moon, Sun, Shield, Trash2, Download, HelpCircle } from 'lucide-react';
+import { X, Bell, Moon, Shield, Trash2, Download, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { NotificationSettings } from '@/components/notifications/NotificationSettings';
+import { LanguageSelector } from './LanguageSelector';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -12,10 +14,8 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const { user, signOut } = useAuth();
-  const [notifications, setNotifications] = useState(true);
+  const { user } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
-  const [reminders, setReminders] = useState(true);
 
   if (!isOpen) return null;
 
@@ -46,18 +46,15 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </div>
         </div>
 
+        {/* Notifications */}
+        <div className="mb-6">
+          <NotificationSettings />
+        </div>
+
         {/* Preferences */}
         <div className="mb-6">
           <h3 className="text-sm font-medium text-muted-foreground mb-3">Preferences</h3>
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Bell className="h-4 w-4 text-muted-foreground" />
-                <Label>Push Notifications</Label>
-              </div>
-              <Switch checked={notifications} onCheckedChange={setNotifications} />
-            </div>
-            
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Moon className="h-4 w-4 text-muted-foreground" />
@@ -66,13 +63,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <Switch checked={darkMode} onCheckedChange={setDarkMode} />
             </div>
             
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Bell className="h-4 w-4 text-muted-foreground" />
-                <Label>Daily Check-in Reminders</Label>
-              </div>
-              <Switch checked={reminders} onCheckedChange={setReminders} />
-            </div>
+            <LanguageSelector />
           </div>
         </div>
 
