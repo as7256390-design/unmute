@@ -108,6 +108,14 @@ export function SupportRoomChat({ room, onBack }: SupportRoomChatProps) {
     if (!input.trim() || !user || sending) return;
 
     const content = input.trim();
+    
+    // Validate message length
+    const MAX_MESSAGE_LENGTH = 2000;
+    if (content.length > MAX_MESSAGE_LENGTH) {
+      toast.error(`Message is too long. Maximum ${MAX_MESSAGE_LENGTH} characters allowed.`);
+      return;
+    }
+    
     setInput('');
     setSending(true);
 
