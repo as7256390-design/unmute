@@ -214,6 +214,14 @@ export function ChatInterface() {
     
     const chat = currentChat || createNewChat();
     const userMessage = input.trim();
+    
+    // Validate message length (prevent excessively long messages)
+    const MAX_MESSAGE_LENGTH = 5000;
+    if (userMessage.length > MAX_MESSAGE_LENGTH) {
+      toast.error(`Message is too long. Maximum ${MAX_MESSAGE_LENGTH} characters allowed.`);
+      return;
+    }
+    
     setInput('');
 
     // Check for crisis content

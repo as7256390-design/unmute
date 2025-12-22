@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
     if (fetchError) {
       console.error("Error fetching notifications:", fetchError);
       return new Response(
-        JSON.stringify({ error: fetchError.message }),
+        JSON.stringify({ error: "Failed to process notifications" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -175,9 +175,9 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error("Process notifications error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    // Return generic error - detailed error is logged server-side
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: "Failed to process notifications" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

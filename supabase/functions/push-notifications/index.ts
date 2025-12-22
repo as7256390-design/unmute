@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
       if (insertError) {
         console.error("Insert error:", insertError);
         return new Response(
-          JSON.stringify({ error: insertError.message }),
+          JSON.stringify({ error: "Failed to save subscription. Please try again." }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
       if (deleteError) {
         console.error("Delete error:", deleteError);
         return new Response(
-          JSON.stringify({ error: deleteError.message }),
+          JSON.stringify({ error: "Failed to unsubscribe. Please try again." }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
       if (scheduleError) {
         console.error("Schedule error:", scheduleError);
         return new Response(
-          JSON.stringify({ error: scheduleError.message }),
+          JSON.stringify({ error: "Failed to schedule notification. Please try again." }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -233,7 +233,7 @@ Deno.serve(async (req) => {
       if (subError) {
         console.error("Subscription fetch error:", subError);
         return new Response(
-          JSON.stringify({ error: subError.message }),
+          JSON.stringify({ error: "Failed to retrieve subscriptions. Please try again." }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -264,9 +264,9 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error("Push notification error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    // Return generic error to client
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: "Something went wrong. Please try again." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

@@ -120,6 +120,26 @@ serve(async (req) => {
     console.log("Authenticated user:", user.id);
 
     const { messages, emotionalState } = await req.json();
+    
+    // Validate message content
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Validate each message and ensure reasonable length limits
+    const MAX_MESSAGE_LENGTH = 5000;
+    for (const msg of messages) {
+      if (typeof msg.content !== 'string' || msg.content.length > MAX_MESSAGE_LENGTH) {
+        return new Response(
+          JSON.stringify({ error: 'Message content is invalid or too long' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+    
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -178,7 +198,8 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("Chat function error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+    // Return generic error to client, detailed error is logged server-side
+    return new Response(JSON.stringify({ error: "Something went wrong. Please try again." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
