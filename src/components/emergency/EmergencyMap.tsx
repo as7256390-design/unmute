@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Button } from '@/components/ui/button';
@@ -19,31 +19,35 @@ interface Location {
 interface EmergencyMapProps {
   locations: Location[];
   userLocation: { lat: number; lon: number } | null;
+  onLocationSelect?: (location: Location | null) => void;
+  fullScreen?: boolean;
 }
 
-// Custom marker icons
-const createIcon = (color: string, emoji: string) => {
+const createIcon = (color: string, emoji: string, isSelected?: boolean) => {
+  const size = isSelected ? 44 : 36;
   return L.divIcon({
     className: 'custom-marker',
     html: `
       <div style="
         background-color: ${color};
-        width: 36px;
-        height: 36px;
+        width: ${size}px;
+        height: ${size}px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         border: 3px solid white;
         box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        font-size: 16px;
+        font-size: ${isSelected ? 20 : 16}px;
+        transform: ${isSelected ? 'scale(1.1)' : 'scale(1)'};
+        transition: all 0.2s ease;
       ">
         ${emoji}
       </div>
     `,
-    iconSize: [36, 36],
-    iconAnchor: [18, 18],
-    popupAnchor: [0, -18],
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
   });
 };
 
@@ -52,15 +56,22 @@ const userIcon = L.divIcon({
   html: `
     <div style="
       background-color: #3b82f6;
-      width: 20px;
-      height: 20px;
+      width: 24px;
+      height: 24px;
       border-radius: 50%;
       border: 4px solid white;
-      box-shadow: 0 0 0 2px #3b82f6, 0 2px 8px rgba(0,0,0,0.3);
+      box-shadow: 0 0 0 3px #3b82f6, 0 2px 12px rgba(59, 130, 246, 0.5);
+      animation: pulse 2s ease-in-out infinite;
     "></div>
+    <style>
+      @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 3px #3b82f6, 0 2px 12px rgba(59, 130, 246, 0.5); }
+        50% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.3), 0 2px 20px rgba(59, 130, 246, 0.4); }
+      }
+    </style>
   `,
-  iconSize: [20, 20],
-  iconAnchor: [10, 10],
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
 });
 
 const typeIcons: Record<string, { color: string; emoji: string }> = {
@@ -73,7 +84,6 @@ const typeIcons: Record<string, { color: string; emoji: string }> = {
   'Ambulance Station': { color: '#ef4444', emoji: '🚑' },
 };
 
-// Component to recenter map when locations change
 function MapController({ userLocation, locations }: { userLocation: { lat: number; lon: number } | null; locations: Location[] }) {
   const map = useMap();
 
@@ -83,52 +93,63 @@ function MapController({ userLocation, locations }: { userLocation: { lat: numbe
         [userLocation.lat, userLocation.lon],
         ...locations.map(loc => [loc.lat, loc.lon] as [number, number])
       ]);
-      map.fitBounds(bounds, { padding: [50, 50] });
+      map.fitBounds(bounds, { padding: [60, 60] });
     } else if (userLocation) {
-      map.setView([userLocation.lat, userLocation.lon], 14);
+      map.setView([userLocation.lat, userLocation.lon], 15);
     }
   }, [userLocation, locations, map]);
 
   return null;
 }
 
-export function EmergencyMap({ locations, userLocation }: EmergencyMapProps) {
+function MapClickHandler({ onMapClick }: { onMapClick: () => void }) {
+  useMapEvents({
+    click: () => onMapClick(),
+  });
+  return null;
+}
+
+export function EmergencyMap({ locations, userLocation, onLocationSelect, fullScreen }: EmergencyMapProps) {
   const defaultCenter: [number, number] = userLocation 
     ? [userLocation.lat, userLocation.lon] 
-    : [20.5937, 78.9629]; // Default to India center
+    : [20.5937, 78.9629];
 
   const getDirections = (location: Location) => {
     const url = `https://www.google.com/maps/dir/?api=1&destination=${location.lat},${location.lon}`;
     window.open(url, '_blank');
   };
 
+  const handleMarkerClick = (location: Location) => {
+    onLocationSelect?.(location);
+  };
+
   return (
-    <div className="h-[400px] w-full rounded-lg overflow-hidden border border-border">
+    <div className={`w-full rounded-lg overflow-hidden ${fullScreen ? 'h-full' : 'h-[400px] border border-border'}`}>
       <MapContainer
         center={defaultCenter}
-        zoom={14}
+        zoom={15}
         className="h-full w-full"
         scrollWheelZoom={true}
+        zoomControl={!fullScreen}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
         <MapController userLocation={userLocation} locations={locations} />
+        <MapClickHandler onMapClick={() => onLocationSelect?.(null)} />
 
-        {/* User location marker */}
         {userLocation && (
           <Marker position={[userLocation.lat, userLocation.lon]} icon={userIcon}>
             <Popup>
-              <div className="text-center">
-                <strong>Your Location</strong>
+              <div className="text-center font-medium">
+                📍 You are here
               </div>
             </Popup>
           </Marker>
         )}
 
-        {/* Location markers */}
         {locations.map((location) => {
           const iconConfig = typeIcons[location.type] || { color: '#6b7280', emoji: '📍' };
           const icon = createIcon(iconConfig.color, iconConfig.emoji);
@@ -138,9 +159,12 @@ export function EmergencyMap({ locations, userLocation }: EmergencyMapProps) {
               key={location.id}
               position={[location.lat, location.lon]}
               icon={icon}
+              eventHandlers={{
+                click: () => handleMarkerClick(location),
+              }}
             >
               <Popup>
-                <div className="min-w-[200px]">
+                <div className="min-w-[180px]">
                   <h3 className="font-semibold text-sm mb-1">{location.name}</h3>
                   <p className="text-xs text-gray-600 mb-1">{location.type}</p>
                   <p className="text-xs text-gray-500 mb-2">{location.address}</p>
