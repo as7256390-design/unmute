@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { MapPin, Loader2, AlertTriangle, WifiOff, RefreshCw, Clock, Database, X, List, Navigation } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { MapPin, Loader2, AlertTriangle, WifiOff, RefreshCw, Clock, Database, X, List, Navigation, Phone, Crosshair, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Toggle } from '@/components/ui/toggle';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { EmergencyMap } from './EmergencyMap';
@@ -19,7 +21,29 @@ interface Location {
   distance: number;
   lat: number;
   lon: number;
+  phone?: string;
 }
+
+// Emergency phone numbers by service type
+const emergencyNumbers: Record<string, string> = {
+  Hospital: '102',
+  Clinic: '102',
+  Doctor: '102',
+  Pharmacy: '102',
+  'Police Station': '100',
+  'Fire Station': '101',
+  'Ambulance Station': '102',
+};
+
+type ServiceFilter = 'hospital' | 'pharmacy' | 'police' | 'fire' | 'clinic';
+
+const serviceFilters: { key: ServiceFilter; label: string; types: string[]; color: string }[] = [
+  { key: 'hospital', label: 'Hospital', types: ['Hospital', 'Ambulance Station'], color: 'bg-red-500' },
+  { key: 'clinic', label: 'Clinic/Doctor', types: ['Clinic', 'Doctor'], color: 'bg-orange-500' },
+  { key: 'pharmacy', label: 'Pharmacy', types: ['Pharmacy'], color: 'bg-green-500' },
+  { key: 'police', label: 'Police', types: ['Police Station'], color: 'bg-blue-500' },
+  { key: 'fire', label: 'Fire Station', types: ['Fire Station'], color: 'bg-amber-600' },
+];
 
 export function NearbyEmergencyHelp() {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,8 +54,29 @@ export function NearbyEmergencyHelp() {
   const [isUsingCache, setIsUsingCache] = useState(false);
   const [showList, setShowList] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [activeFilters, setActiveFilters] = useState<Set<ServiceFilter>>(new Set(['hospital', 'clinic', 'pharmacy', 'police', 'fire']));
+  const [recenterTrigger, setRecenterTrigger] = useState(0);
 
   const { isOnline, cachedData, saveToCache, getCacheAge, hasCachedData } = useEmergencyCache();
+
+  const filteredLocations = useMemo(() => {
+    const activeTypes = serviceFilters
+      .filter(f => activeFilters.has(f.key))
+      .flatMap(f => f.types);
+    return locations.filter(loc => activeTypes.includes(loc.type));
+  }, [locations, activeFilters]);
+
+  const toggleFilter = (filter: ServiceFilter) => {
+    setActiveFilters(prev => {
+      const next = new Set(prev);
+      if (next.has(filter)) {
+        if (next.size > 1) next.delete(filter);
+      } else {
+        next.add(filter);
+      }
+      return next;
+    });
+  };
 
   const loadFromCache = () => {
     if (cachedData) {
@@ -121,11 +166,23 @@ export function NearbyEmergencyHelp() {
     window.open(url, '_blank');
   };
 
+  const callEmergency = (location: Location) => {
+    const number = location.phone || emergencyNumbers[location.type] || '112';
+    window.location.href = `tel:${number}`;
+  };
+
+  const handleRecenter = () => {
+    setRecenterTrigger(prev => prev + 1);
+  };
+
   const closeMap = () => {
     setIsOpen(false);
     setShowList(false);
     setSelectedLocation(null);
   };
+
+  const activeFilterCount = activeFilters.size;
+  const totalFilters = serviceFilters.length;
 
   return (
     <>
@@ -163,14 +220,46 @@ export function NearbyEmergencyHelp() {
                   </Button>
                   <div>
                     <h1 className="font-semibold">Nearby Emergency Help</h1>
-                    {locations.length > 0 && (
+                    {filteredLocations.length > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        {locations.length} locations found
+                        {filteredLocations.length} of {locations.length} locations shown
                       </p>
                     )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {/* Filter Button */}
+                  {locations.length > 0 && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="gap-2">
+                          <Filter className="h-4 w-4" />
+                          {activeFilterCount < totalFilters && (
+                            <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                              {activeFilterCount}
+                            </Badge>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 p-3" align="end">
+                        <p className="text-sm font-medium mb-3">Show services</p>
+                        <div className="space-y-2">
+                          {serviceFilters.map(filter => (
+                            <Toggle
+                              key={filter.key}
+                              pressed={activeFilters.has(filter.key)}
+                              onPressedChange={() => toggleFilter(filter.key)}
+                              className="w-full justify-start gap-2 h-9"
+                              variant="outline"
+                            >
+                              <span className={`w-3 h-3 rounded-full ${filter.color}`} />
+                              {filter.label}
+                            </Toggle>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
                   {isOnline && !loading && (
                     <Button variant="ghost" size="icon" onClick={fetchNearbyLocations}>
                       <RefreshCw className="h-4 w-4" />
@@ -258,28 +347,38 @@ export function NearbyEmergencyHelp() {
                   {/* Full Screen Map */}
                   <div className="h-full">
                     <EmergencyMap 
-                      locations={locations} 
+                      locations={filteredLocations} 
                       userLocation={userLocation}
                       onLocationSelect={setSelectedLocation}
+                      recenterTrigger={recenterTrigger}
                       fullScreen
                     />
+                  </div>
+
+                  {/* Map Controls */}
+                  <div className="absolute right-4 top-20 flex flex-col gap-2">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-10 w-10 rounded-full shadow-lg bg-background"
+                      onClick={handleRecenter}
+                      title="Center on my location"
+                    >
+                      <Crosshair className="h-5 w-5" />
+                    </Button>
                   </div>
 
                   {/* Legend */}
                   <div className="absolute bottom-4 left-4 bg-background/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border">
                     <div className="flex flex-wrap gap-2">
-                      <Badge variant="outline" className="gap-1.5 text-xs">
-                        <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-                        Hospital
-                      </Badge>
-                      <Badge variant="outline" className="gap-1.5 text-xs">
-                        <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-                        Pharmacy
-                      </Badge>
-                      <Badge variant="outline" className="gap-1.5 text-xs">
-                        <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                        Police
-                      </Badge>
+                      {serviceFilters
+                        .filter(f => activeFilters.has(f.key))
+                        .map(filter => (
+                          <Badge key={filter.key} variant="outline" className="gap-1.5 text-xs">
+                            <span className={`w-2.5 h-2.5 rounded-full ${filter.color}`}></span>
+                            {filter.label}
+                          </Badge>
+                        ))}
                     </div>
                   </div>
 
@@ -296,7 +395,7 @@ export function NearbyEmergencyHelp() {
                         <div className="w-12 h-1.5 bg-muted rounded-full mx-auto my-3" />
                         <ScrollArea className="h-[calc(60vh-2rem)] px-4 pb-4">
                           <div className="space-y-3">
-                            {locations.map((location) => (
+                            {filteredLocations.map((location) => (
                               <motion.div
                                 key={location.id}
                                 initial={{ opacity: 0, y: 10 }}
@@ -311,14 +410,25 @@ export function NearbyEmergencyHelp() {
                                     <span className="text-xs text-muted-foreground">{location.distance} km</span>
                                   </div>
                                 </div>
-                                <Button
-                                  size="sm"
-                                  onClick={() => getDirections(location)}
-                                  className="gap-1.5 shrink-0 ml-2"
-                                >
-                                  <Navigation className="h-3.5 w-3.5" />
-                                  Go
-                                </Button>
+                                <div className="flex gap-2 shrink-0 ml-2">
+                                  <Button
+                                    size="icon"
+                                    variant="outline"
+                                    onClick={() => callEmergency(location)}
+                                    className="h-9 w-9 text-green-600 border-green-300 hover:bg-green-50"
+                                    title="Call"
+                                  >
+                                    <Phone className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    onClick={() => getDirections(location)}
+                                    className="h-9 w-9"
+                                    title="Directions"
+                                  >
+                                    <Navigation className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </motion.div>
                             ))}
                           </div>
@@ -345,10 +455,21 @@ export function NearbyEmergencyHelp() {
                               <span className="text-sm text-muted-foreground">{selectedLocation.distance} km away</span>
                             </div>
                           </div>
-                          <Button onClick={() => getDirections(selectedLocation)} className="gap-2 shrink-0">
-                            <Navigation className="h-4 w-4" />
-                            Directions
-                          </Button>
+                          <div className="flex gap-2 shrink-0">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => callEmergency(selectedLocation)}
+                              className="h-10 w-10 text-green-600 border-green-300 hover:bg-green-50"
+                              title="Call Emergency"
+                            >
+                              <Phone className="h-5 w-5" />
+                            </Button>
+                            <Button onClick={() => getDirections(selectedLocation)} className="gap-2">
+                              <Navigation className="h-4 w-4" />
+                              Directions
+                            </Button>
+                          </div>
                         </div>
                         <Button
                           variant="ghost"

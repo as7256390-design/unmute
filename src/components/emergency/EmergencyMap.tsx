@@ -21,6 +21,7 @@ interface EmergencyMapProps {
   userLocation: { lat: number; lon: number } | null;
   onLocationSelect?: (location: Location | null) => void;
   fullScreen?: boolean;
+  recenterTrigger?: number;
 }
 
 const createIcon = (color: string, emoji: string, isSelected?: boolean) => {
@@ -84,9 +85,18 @@ const typeIcons: Record<string, { color: string; emoji: string }> = {
   'Ambulance Station': { color: '#ef4444', emoji: '🚑' },
 };
 
-function MapController({ userLocation, locations }: { userLocation: { lat: number; lon: number } | null; locations: Location[] }) {
+function MapController({ 
+  userLocation, 
+  locations, 
+  recenterTrigger 
+}: { 
+  userLocation: { lat: number; lon: number } | null; 
+  locations: Location[];
+  recenterTrigger?: number;
+}) {
   const map = useMap();
 
+  // Initial fit bounds
   useEffect(() => {
     if (userLocation && locations.length > 0) {
       const bounds = L.latLngBounds([
@@ -97,7 +107,14 @@ function MapController({ userLocation, locations }: { userLocation: { lat: numbe
     } else if (userLocation) {
       map.setView([userLocation.lat, userLocation.lon], 15);
     }
-  }, [userLocation, locations, map]);
+  }, [locations, map]);
+
+  // Recenter on user location when triggered
+  useEffect(() => {
+    if (recenterTrigger && recenterTrigger > 0 && userLocation) {
+      map.flyTo([userLocation.lat, userLocation.lon], 16, { duration: 0.5 });
+    }
+  }, [recenterTrigger, userLocation, map]);
 
   return null;
 }
@@ -109,7 +126,7 @@ function MapClickHandler({ onMapClick }: { onMapClick: () => void }) {
   return null;
 }
 
-export function EmergencyMap({ locations, userLocation, onLocationSelect, fullScreen }: EmergencyMapProps) {
+export function EmergencyMap({ locations, userLocation, onLocationSelect, fullScreen, recenterTrigger }: EmergencyMapProps) {
   const defaultCenter: [number, number] = userLocation 
     ? [userLocation.lat, userLocation.lon] 
     : [20.5937, 78.9629];
@@ -137,7 +154,7 @@ export function EmergencyMap({ locations, userLocation, onLocationSelect, fullSc
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
-        <MapController userLocation={userLocation} locations={locations} />
+        <MapController userLocation={userLocation} locations={locations} recenterTrigger={recenterTrigger} />
         <MapClickHandler onMapClick={() => onLocationSelect?.(null)} />
 
         {userLocation && (
