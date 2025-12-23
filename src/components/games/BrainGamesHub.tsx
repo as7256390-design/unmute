@@ -15,8 +15,7 @@ import {
   Clock,
   TrendingUp,
   Sparkles,
-  ChevronRight,
-  Flame
+  ChevronRight
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,7 +24,6 @@ import { toast } from 'sonner';
 import { DOMAIN_INFO, CognitiveDomain } from '@/types/cognitive';
 import { PatternMatchGame } from './PatternMatchGame';
 import { MemoryGridGame } from './MemoryGridGame';
-import { DailyChallenges } from './DailyChallenges';
 
 interface Game {
   id: string;
@@ -92,23 +90,10 @@ export function BrainGamesHub() {
   const [gameScore, setGameScore] = useState(0);
   const [gameAccuracy, setGameAccuracy] = useState(0);
   const [gameDuration, setGameDuration] = useState(0);
-  const [completedTodayIds, setCompletedTodayIds] = useState<string[]>([]);
-  const [challengeBonusXP, setChallengeBonusXP] = useState(0);
-
-  const handlePlayChallenge = (game: Game, bonusXP: number) => {
-    setChallengeBonusXP(bonusXP);
-    startGame(game);
-  };
 
   useEffect(() => {
     if (user) {
       loadData();
-      // Load today's completed games from localStorage
-      const today = new Date().toISOString().split('T')[0];
-      const stored = localStorage.getItem(`completed_games_${today}`);
-      if (stored) {
-        setCompletedTodayIds(JSON.parse(stored));
-      }
     }
   }, [user]);
 
@@ -191,20 +176,7 @@ export function BrainGamesHub() {
       console.log('Session save skipped for built-in game');
     }
 
-    // Track completed game for daily challenges
-    const today = new Date().toISOString().split('T')[0];
-    const storedKey = `completed_games_${today}`;
-    const stored = localStorage.getItem(storedKey);
-    const completedIds = stored ? JSON.parse(stored) : [];
-    if (!completedIds.includes(selectedGame.id)) {
-      completedIds.push(selectedGame.id);
-      localStorage.setItem(storedKey, JSON.stringify(completedIds));
-      setCompletedTodayIds(completedIds);
-    }
-
-    const bonusText = challengeBonusXP > 0 ? ` (+${challengeBonusXP} bonus XP!)` : '';
-    toast.success(`Great job! You scored ${score} points!${bonusText}`);
-    setChallengeBonusXP(0);
+    toast.success(`Great job! You scored ${score} points!`);
   };
 
   const backToBrowse = () => {
@@ -474,22 +446,8 @@ export function BrainGamesHub() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="games" className="mt-4 space-y-6">
-          {/* Daily Challenges Section */}
-          <DailyChallenges
-            games={games}
-            domainScores={domainScores}
-            completedGameIds={completedTodayIds}
-            onPlayChallenge={handlePlayChallenge}
-          />
-
-          {/* All Games Grid */}
-          <div>
-            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <Puzzle className="h-5 w-5 text-primary" />
-              All Games
-            </h3>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <TabsContent value="games" className="mt-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <AnimatePresence>
               {games.map((game, index) => (
                 <motion.div
@@ -535,7 +493,6 @@ export function BrainGamesHub() {
                 <p>No games available yet. Check back soon!</p>
               </div>
             )}
-            </div>
           </div>
         </TabsContent>
 
