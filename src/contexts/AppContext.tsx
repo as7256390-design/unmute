@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { Chat, Message, EmotionalState, UserProfile } from '@/types';
 
-type ViewType = 'chat' | 'emotional-form' | 'phq9' | 'assessments' | 'support-rooms' | 'wall' | 'journal' | 'dashboard' | 'parent' | 'onboarding' | 'mood-tracker' | 'wellness' | 'alignment' | 'programs' | 'gamification' | 'counselor' | 'training' | 'relaxation' | 'institution' | 'brain-games';
+type ViewType = 'chat' | 'emotional-form' | 'phq9' | 'assessments' | 'support-rooms' | 'wall' | 'journal' | 'dashboard' | 'parent' | 'onboarding' | 'mood-tracker' | 'mood' | 'wellness' | 'alignment' | 'programs' | 'gamification' | 'counselor' | 'training' | 'relaxation' | 'institution' | 'brain-games';
 
 interface AppContextType {
   // Chat state
