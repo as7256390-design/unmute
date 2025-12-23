@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.nearby-emergency]
 verify_jwt = false
+
+[functions.send-panic-alert]
+verify_jwt = false

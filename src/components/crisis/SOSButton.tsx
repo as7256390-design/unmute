@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Phone, X, Heart, ExternalLink, MapPin, Bell, Settings } from 'lucide-react';
+import { Phone, X, Heart, ExternalLink, MapPin, Bell, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { NearbyEmergencyHelp } from '@/components/emergency/NearbyEmergencyHelp';
 import { ProximityAlertSettings } from '@/components/emergency/ProximityAlertSettings';
+import { PanicMode } from '@/components/emergency/PanicMode';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const emergencyResources = [
@@ -68,12 +69,16 @@ export function SOSButton() {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="help" className="gap-2">
+              <TabsList className="grid w-full grid-cols-3 mb-4">
+                <TabsTrigger value="help" className="gap-1.5 text-xs sm:text-sm">
                   <Phone className="h-4 w-4" />
-                  Get Help
+                  <span className="hidden sm:inline">Get</span> Help
                 </TabsTrigger>
-                <TabsTrigger value="alerts" className="gap-2">
+                <TabsTrigger value="panic" className="gap-1.5 text-xs sm:text-sm">
+                  <AlertTriangle className="h-4 w-4" />
+                  Panic
+                </TabsTrigger>
+                <TabsTrigger value="alerts" className="gap-1.5 text-xs sm:text-sm">
                   <Bell className="h-4 w-4" />
                   Alerts
                 </TabsTrigger>
@@ -127,6 +132,10 @@ export function SOSButton() {
                     💙 It takes courage to reach out. We're proud of you for being here.
                   </p>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="panic" className="mt-0">
+                <PanicMode />
               </TabsContent>
 
               <TabsContent value="alerts" className="mt-0">
