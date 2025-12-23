@@ -24,6 +24,8 @@ import { toast } from 'sonner';
 import { DOMAIN_INFO, CognitiveDomain } from '@/types/cognitive';
 import { PatternMatchGame } from './PatternMatchGame';
 import { MemoryGridGame } from './MemoryGridGame';
+import SpeedSortGame from './SpeedSortGame';
+import LogicChainGame from './LogicChainGame';
 
 interface Game {
   id: string;
@@ -76,6 +78,30 @@ const BUILT_IN_GAMES: Game[] = [
     icon: '🧠',
     min_duration_seconds: 90,
     max_duration_seconds: 180,
+  },
+  {
+    id: 'speed-sort',
+    name: 'Speed Sort',
+    slug: 'speed-sort',
+    description: 'Lightning-fast number comparison. Test your processing speed and reaction time!',
+    instructions: 'Compare the displayed number to the target. Is it higher or lower? React as fast as you can - speed is key!',
+    primary_domain: 'speed',
+    secondary_domain: 'attention',
+    icon: '⚡',
+    min_duration_seconds: 60,
+    max_duration_seconds: 90,
+  },
+  {
+    id: 'logic-chain',
+    name: 'Logic Chain',
+    slug: 'logic-chain',
+    description: 'Find the missing number in pattern sequences. Test your logical reasoning and problem-solving!',
+    instructions: 'Analyze the sequence pattern and identify the missing number. Patterns increase in complexity as you progress!',
+    primary_domain: 'problem_solving',
+    secondary_domain: 'flexibility',
+    icon: '🔗',
+    min_duration_seconds: 90,
+    max_duration_seconds: 120,
   },
 ];
 
@@ -274,6 +300,24 @@ export function BrainGamesHub() {
         <MemoryGridGame
           onComplete={handleGameComplete}
           onQuit={backToBrowse}
+        />
+      );
+    }
+
+    if (selectedGame.slug === 'speed-sort') {
+      return (
+        <SpeedSortGame
+          onComplete={(result) => handleGameComplete(result.score, result.accuracy, result.duration)}
+          onExit={backToBrowse}
+        />
+      );
+    }
+
+    if (selectedGame.slug === 'logic-chain') {
+      return (
+        <LogicChainGame
+          onComplete={(result) => handleGameComplete(result.score, result.accuracy, result.duration)}
+          onExit={backToBrowse}
         />
       );
     }
