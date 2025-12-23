@@ -129,20 +129,23 @@ export function NearbyEmergencyHelp() {
       
       let errorMessage = 'Failed to fetch nearby locations';
       
-      if (err.code === 1) {
-        errorMessage = 'Location permission denied. Please enable location access.';
-      } else if (err.code === 2) {
-        errorMessage = 'Location unavailable. Please try again.';
-      } else if (err.code === 3) {
+      // Handle GeolocationPositionError
+      if (err?.code === 1 || err?.PERMISSION_DENIED) {
+        errorMessage = 'Location permission denied. Please enable location access in your browser settings.';
+      } else if (err?.code === 2 || err?.POSITION_UNAVAILABLE) {
+        errorMessage = 'Location unavailable. Please check your device settings.';
+      } else if (err?.code === 3 || err?.TIMEOUT) {
         errorMessage = 'Location request timed out. Please try again.';
-      } else if (err.message) {
+      } else if (err?.message) {
         errorMessage = err.message;
+      } else if (typeof err === 'object') {
+        errorMessage = `Error: ${JSON.stringify(err)}`;
       }
       
       // If fetch fails and we have cached data, offer to use it
       if (hasCachedData) {
         loadFromCache();
-        toast.warning('Using cached data due to network error');
+        toast.warning('Using cached data due to error: ' + errorMessage);
       } else {
         setError(errorMessage);
         toast.error(errorMessage);
