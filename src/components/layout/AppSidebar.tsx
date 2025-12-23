@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from 'next-themes';
 import { 
   MessageCircle, 
   Users, 
@@ -23,6 +24,7 @@ import {
   Calendar,
   GraduationCap,
   Moon,
+  Sun,
   Building2,
   Gamepad2,
   HeartHandshake,
@@ -81,9 +83,14 @@ export function AppSidebar() {
     setUserType
   } = useApp();
   const { signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
   const isMobile = useIsMobile();
   const [showSettings, setShowSettings] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -163,13 +170,23 @@ export function AppSidebar() {
                   </div>
                   <span className="font-display font-semibold text-lg">Menu</span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <X className="h-5 w-5" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleTheme}
+                    title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                  >
+                    {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
               </div>
 
               <ScrollArea className="h-[calc(100vh-4rem)] pb-20">
