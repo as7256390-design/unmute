@@ -26,6 +26,10 @@ import { PatternMatchGame } from './PatternMatchGame';
 import { MemoryGridGame } from './MemoryGridGame';
 import SpeedSortGame from './SpeedSortGame';
 import LogicChainGame from './LogicChainGame';
+import { ColorStroopGame } from './ColorStroopGame';
+import { NBackGame } from './NBackGame';
+import { DualFocusGame } from './DualFocusGame';
+import { VisualHuntGame } from './VisualHuntGame';
 
 interface Game {
   id: string;
@@ -102,6 +106,54 @@ const BUILT_IN_GAMES: Game[] = [
     icon: '🔗',
     min_duration_seconds: 90,
     max_duration_seconds: 120,
+  },
+  {
+    id: 'color-stroop',
+    name: 'Color Stroop',
+    slug: 'color-stroop',
+    description: 'Override automatic responses! The classic attention test where you must ignore conflicting information.',
+    instructions: 'Words appear in different colors. Follow the instruction - sometimes match the ink color, sometimes the word meaning!',
+    primary_domain: 'attention',
+    secondary_domain: 'flexibility',
+    icon: '🎨',
+    min_duration_seconds: 60,
+    max_duration_seconds: 90,
+  },
+  {
+    id: 'n-back',
+    name: 'N-Back Memory',
+    slug: 'n-back',
+    description: 'The gold standard of working memory training. Remember positions from N steps ago!',
+    instructions: 'Watch shapes appear on a grid. Press MATCH if the position matches what was shown N steps ago!',
+    primary_domain: 'memory',
+    secondary_domain: 'attention',
+    icon: '🔮',
+    min_duration_seconds: 60,
+    max_duration_seconds: 120,
+  },
+  {
+    id: 'dual-focus',
+    name: 'Dual Focus',
+    slug: 'dual-focus',
+    description: 'Juggle two tasks at once! Train your divided attention and multitasking ability.',
+    instructions: 'Handle two different tasks - number parity and arrow colors. At higher levels, answer both simultaneously!',
+    primary_domain: 'flexibility',
+    secondary_domain: 'attention',
+    icon: '🎭',
+    min_duration_seconds: 75,
+    max_duration_seconds: 120,
+  },
+  {
+    id: 'visual-hunt',
+    name: 'Visual Hunt',
+    slug: 'visual-hunt',
+    description: 'Find the target in a sea of distractors! Sharpen your visual search and scanning skills.',
+    instructions: 'Read the target description and quickly find the matching item in the grid. Speed matters!',
+    primary_domain: 'speed',
+    secondary_domain: 'attention',
+    icon: '🔍',
+    min_duration_seconds: 60,
+    max_duration_seconds: 90,
   },
 ];
 
@@ -316,6 +368,42 @@ export function BrainGamesHub() {
     if (selectedGame.slug === 'logic-chain') {
       return (
         <LogicChainGame
+          onComplete={(result) => handleGameComplete(result.score, result.accuracy, result.duration)}
+          onExit={backToBrowse}
+        />
+      );
+    }
+
+    if (selectedGame.slug === 'color-stroop') {
+      return (
+        <ColorStroopGame
+          onComplete={(result) => handleGameComplete(result.score, result.accuracy, result.duration)}
+          onExit={backToBrowse}
+        />
+      );
+    }
+
+    if (selectedGame.slug === 'n-back') {
+      return (
+        <NBackGame
+          onComplete={(result) => handleGameComplete(result.score, result.accuracy, result.duration)}
+          onExit={backToBrowse}
+        />
+      );
+    }
+
+    if (selectedGame.slug === 'dual-focus') {
+      return (
+        <DualFocusGame
+          onComplete={(result) => handleGameComplete(result.score, result.accuracy, result.duration)}
+          onExit={backToBrowse}
+        />
+      );
+    }
+
+    if (selectedGame.slug === 'visual-hunt') {
+      return (
+        <VisualHuntGame
           onComplete={(result) => handleGameComplete(result.score, result.accuracy, result.duration)}
           onExit={backToBrowse}
         />
