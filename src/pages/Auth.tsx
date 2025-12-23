@@ -17,14 +17,30 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) {
-      navigate('/');
+    if (!loading && user) {
+      navigate('/', { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
+
+  // Show nothing while checking auth state to prevent flash
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30">
+        <div className="animate-pulse">
+          <Heart className="h-12 w-12 text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  // Already logged in, redirecting
+  if (user) {
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
