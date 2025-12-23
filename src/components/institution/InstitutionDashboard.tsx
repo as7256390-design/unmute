@@ -79,33 +79,40 @@ export function InstitutionDashboard() {
   useEffect(() => {
     if (user) {
       loadInstitution();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
   const loadInstitution = async () => {
     if (!user) return;
 
-    const { data: inst, error } = await supabase
-      .from('institutions')
-      .select('*')
-      .eq('admin_user_id', user.id)
-      .maybeSingle();
+    try {
+      const { data: inst, error } = await supabase
+        .from('institutions')
+        .select('*')
+        .eq('admin_user_id', user.id)
+        .maybeSingle();
 
-    if (error) {
-      console.error('Error loading institution:', error);
-      toast.error('Failed to load institution data');
+      if (error) {
+        console.error('Error loading institution:', error);
+        toast.error('Failed to load institution data');
+        setLoading(false);
+        return;
+      }
+
+      if (inst) {
+        setInstitution(inst);
+        loadStats(inst.id);
+        loadMembers(inst.id);
+      } else {
+        setShowCreate(true);
+      }
+    } catch (err) {
+      console.error('Error:', err);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    if (inst) {
-      setInstitution(inst);
-      loadStats(inst.id);
-      loadMembers(inst.id);
-    } else {
-      setShowCreate(true);
-    }
-    setLoading(false);
   };
 
   const loadStats = async (institutionId: string) => {
@@ -254,6 +261,18 @@ export function InstitutionDashboard() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="max-w-lg mx-auto p-6 text-center">
+        <div className="w-16 h-16 rounded-full gradient-hero flex items-center justify-center mx-auto mb-4">
+          <Building2 className="h-8 w-8 text-primary-foreground" />
+        </div>
+        <h2 className="font-display text-xl font-semibold mb-2">Institution Dashboard</h2>
+        <p className="text-muted-foreground">Please sign in to manage your institution.</p>
       </div>
     );
   }

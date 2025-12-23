@@ -15,7 +15,8 @@ import {
   Award,
   ChevronRight,
   Play,
-  Star
+  Star,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -49,8 +50,27 @@ export function PeerListenerTraining() {
     if (user) {
       fetchModulesAndProgress();
       checkCertification();
+    } else {
+      // Still load modules for preview
+      fetchModulesOnly();
     }
   }, [user]);
+
+  const fetchModulesOnly = async () => {
+    try {
+      const { data: modulesData, error: modulesError } = await supabase
+        .from('training_modules')
+        .select('*')
+        .order('order_index');
+
+      if (modulesError) throw modulesError;
+      setModules(modulesData || []);
+    } catch (error) {
+      console.error('Error fetching training data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchModulesAndProgress = async () => {
     try {
@@ -62,13 +82,15 @@ export function PeerListenerTraining() {
       if (modulesError) throw modulesError;
       setModules(modulesData || []);
 
-      const { data: progressData, error: progressError } = await supabase
-        .from('user_training_progress')
-        .select('*')
-        .eq('user_id', user!.id);
+      if (user) {
+        const { data: progressData, error: progressError } = await supabase
+          .from('user_training_progress')
+          .select('*')
+          .eq('user_id', user.id);
 
-      if (progressError) throw progressError;
-      setProgress(progressData || []);
+        if (progressError) throw progressError;
+        setProgress(progressData || []);
+      }
     } catch (error) {
       console.error('Error fetching training data:', error);
     } finally {
@@ -77,11 +99,12 @@ export function PeerListenerTraining() {
   };
 
   const checkCertification = async () => {
+    if (!user) return;
     const { data } = await supabase
       .from('peer_listeners')
       .select('is_certified')
-      .eq('user_id', user!.id)
-      .single();
+      .eq('user_id', user.id)
+      .maybeSingle();
 
     setIsCertified(data?.is_certified || false);
   };
@@ -91,11 +114,16 @@ export function PeerListenerTraining() {
   };
 
   const startModule = async (module: TrainingModule) => {
+    if (!user) {
+      toast.error('Please sign in to start training');
+      return;
+    }
+    
     const existingProgress = getModuleProgress(module.id);
     
     if (!existingProgress) {
       await supabase.from('user_training_progress').insert({
-        user_id: user!.id,
+        user_id: user.id,
         module_id: module.id,
         status: 'in_progress'
       });
@@ -105,11 +133,16 @@ export function PeerListenerTraining() {
   };
 
   const completeModule = async (moduleId: string, quizScore?: number) => {
+    if (!user) {
+      toast.error('Please sign in to save progress');
+      return;
+    }
+    
     try {
       await supabase
         .from('user_training_progress')
         .upsert({
-          user_id: user!.id,
+          user_id: user.id,
           module_id: moduleId,
           status: 'completed',
           quiz_score: quizScore || 100,
@@ -126,7 +159,7 @@ export function PeerListenerTraining() {
       if (allRequiredComplete && !isCertified) {
         // Certify the user as a peer listener
         await supabase.from('peer_listeners').upsert({
-          user_id: user!.id,
+          user_id: user.id,
           is_certified: true,
           certified_at: new Date().toISOString(),
           is_active: true
@@ -304,12 +337,37 @@ function ModuleViewer({
   onBack: () => void;
 }) {
   const [currentStep, setCurrentStep] = useState(0);
-  const content = module.content as { steps?: Array<{ title: string; content: string; type: string }> };
-  const steps = content?.steps || [];
+  const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
+  const [showQuizResult, setShowQuizResult] = useState(false);
+  
+  const content = module.content as { 
+    steps?: Array<{ title: string; content: string; type: string }>;
+    slides?: Array<{ title: string; content: string }>;
+    quiz?: Array<{ question: string; options: string[]; correct: number }>;
+  };
+  
+  // Use slides if steps don't exist
+  const slides = content?.slides || content?.steps || [];
+  const quiz = content?.quiz?.[0];
+  const totalSteps = slides.length + (quiz ? 1 : 0);
+  const isQuizStep = currentStep >= slides.length && quiz;
 
   const handleNext = () => {
-    if (currentStep < steps.length - 1) {
+    if (isQuizStep) {
+      if (quizAnswer === null) {
+        toast.error('Please select an answer');
+        return;
+      }
+      if (!showQuizResult) {
+        setShowQuizResult(true);
+        return;
+      }
+      const score = quizAnswer === quiz?.correct ? 100 : 50;
+      onComplete(score);
+    } else if (currentStep < slides.length - 1) {
       setCurrentStep(currentStep + 1);
+    } else if (quiz) {
+      setCurrentStep(slides.length); // Go to quiz
     } else {
       onComplete(100);
     }
@@ -323,11 +381,11 @@ function ModuleViewer({
           <Button variant="ghost" onClick={onBack}>← Back</Button>
           <h2 className="font-semibold">{module.title}</h2>
           <span className="text-sm text-muted-foreground">
-            {currentStep + 1} / {steps.length || 1}
+            {currentStep + 1} / {totalSteps}
           </span>
         </div>
         <Progress 
-          value={((currentStep + 1) / (steps.length || 1)) * 100} 
+          value={((currentStep + 1) / totalSteps) * 100} 
           className="mt-3 max-w-3xl mx-auto"
         />
       </div>
@@ -343,14 +401,53 @@ function ModuleViewer({
               exit={{ opacity: 0, x: -20 }}
               className="space-y-6"
             >
-              {steps.length > 0 ? (
+              {isQuizStep && quiz ? (
+                <div className="space-y-6">
+                  <h3 className="text-2xl font-display font-bold">Quick Check</h3>
+                  <p className="text-lg">{quiz.question}</p>
+                  <div className="space-y-3">
+                    {quiz.options.map((option, i) => (
+                      <button
+                        key={i}
+                        onClick={() => !showQuizResult && setQuizAnswer(i)}
+                        disabled={showQuizResult}
+                        className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
+                          quizAnswer === i 
+                            ? showQuizResult
+                              ? i === quiz.correct
+                                ? 'border-green-500 bg-green-50 dark:bg-green-950'
+                                : 'border-red-500 bg-red-50 dark:bg-red-950'
+                              : 'border-primary bg-primary/10'
+                            : showQuizResult && i === quiz.correct
+                              ? 'border-green-500 bg-green-50 dark:bg-green-950'
+                              : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                  {showQuizResult && (
+                    <div className={`p-4 rounded-lg ${quizAnswer === quiz.correct ? 'bg-green-100 dark:bg-green-900' : 'bg-amber-100 dark:bg-amber-900'}`}>
+                      <p className="font-semibold">
+                        {quizAnswer === quiz.correct ? '✅ Correct!' : '❌ Not quite right'}
+                      </p>
+                      <p className="text-sm mt-1">
+                        {quizAnswer === quiz.correct 
+                          ? 'Great job! You understood the concept.'
+                          : `The correct answer is: "${quiz.options[quiz.correct]}"`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : slides.length > 0 ? (
                 <>
                   <h3 className="text-2xl font-display font-bold">
-                    {steps[currentStep]?.title || 'Welcome'}
+                    {slides[currentStep]?.title || 'Welcome'}
                   </h3>
                   <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <p className="text-lg leading-relaxed">
-                      {steps[currentStep]?.content || module.description}
+                    <p className="text-lg leading-relaxed whitespace-pre-line">
+                      {slides[currentStep]?.content || module.description}
                     </p>
                   </div>
                 </>
@@ -375,13 +472,29 @@ function ModuleViewer({
         <div className="max-w-3xl mx-auto flex justify-between">
           <Button 
             variant="outline" 
-            onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+            onClick={() => {
+              if (isQuizStep) {
+                setCurrentStep(slides.length - 1);
+                setQuizAnswer(null);
+                setShowQuizResult(false);
+              } else {
+                setCurrentStep(Math.max(0, currentStep - 1));
+              }
+            }}
             disabled={currentStep === 0}
           >
             Previous
           </Button>
           <Button onClick={handleNext}>
-            {currentStep < steps.length - 1 ? 'Continue' : 'Complete Module'}
+            {isQuizStep 
+              ? showQuizResult 
+                ? 'Complete Module' 
+                : 'Check Answer'
+              : currentStep < slides.length - 1 
+                ? 'Continue' 
+                : quiz 
+                  ? 'Take Quiz'
+                  : 'Complete Module'}
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>

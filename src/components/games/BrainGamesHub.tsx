@@ -172,6 +172,8 @@ export function BrainGamesHub() {
   useEffect(() => {
     if (user) {
       loadData();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
