@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { AppSidebar } from './AppSidebar';
 import { useApp } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -9,6 +10,7 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   const { sidebarOpen } = useApp();
+  const isMobile = useIsMobile();
 
   return (
     <div className="min-h-screen bg-background">
@@ -16,7 +18,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <main 
         className={cn(
           "min-h-screen transition-all duration-300",
-          sidebarOpen ? "ml-72" : "ml-14"
+          isMobile ? "ml-0" : (sidebarOpen ? "ml-72" : "ml-14")
         )}
       >
         {children}
