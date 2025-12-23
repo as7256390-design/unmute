@@ -25,7 +25,8 @@ import {
   Moon,
   Building2,
   Brain,
-  Gamepad2
+  Gamepad2,
+  HeartHandshake
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/contexts/AppContext';
@@ -52,6 +53,7 @@ const toolsNavItems = [
   { id: 'programs', label: 'Guided Programs', icon: Target, description: 'Structured wellness' },
   { id: 'relaxation', label: 'Sleep & Relax', icon: Moon, description: 'Calm content' },
   { id: 'gamification', label: 'Achievements', icon: Trophy, description: 'Badges & XP' },
+  { id: 'family-activities', label: 'Family Activities', icon: HeartHandshake, description: 'Bond with parents' },
   { id: 'alignment', label: 'Family Alignment', icon: UserCheck, description: 'Parent-child gap' },
   { id: 'assessments', label: 'Mental Health Check', icon: Sparkles, description: 'PHQ-9 & GAD-7' },
   { id: 'emotional-form', label: 'Emotional Profile', icon: ClipboardList, description: 'Deep self-assessment' },

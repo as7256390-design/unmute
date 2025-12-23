@@ -22,6 +22,7 @@ import { PeerListenerTraining } from '@/components/training/PeerListenerTraining
 import { RelaxationContent } from '@/components/relaxation/RelaxationContent';
 import { InstitutionDashboard } from '@/components/institution/InstitutionDashboard';
 import { BrainGamesHub } from '@/components/games/BrainGamesHub';
+import { ChildSharedActivities } from '@/components/child/ChildSharedActivities';
 import { SOSButton } from '@/components/crisis/SOSButton';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { Loader2 } from 'lucide-react';
@@ -93,6 +94,8 @@ const Index = () => {
         return <RelaxationContent />;
       case 'institution':
         return <InstitutionDashboard />;
+      case 'family-activities':
+        return <ChildSharedActivities />;
       default:
         return <ChatInterface />;
     }
