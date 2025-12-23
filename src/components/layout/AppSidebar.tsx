@@ -24,19 +24,21 @@ import {
   GraduationCap,
   Moon,
   Building2,
-  Brain,
   Gamepad2,
-  HeartHandshake
+  HeartHandshake,
+  Menu,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { SettingsModal } from '@/components/settings/SettingsModal';
-import { LanguageSelector } from '@/components/settings/LanguageSelector';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const mainNavItems = [
   { id: 'chat', label: 'Chat', icon: MessageCircle, description: 'Talk to someone' },
@@ -79,7 +81,9 @@ export function AppSidebar() {
     setUserType
   } = useApp();
   const { signOut } = useAuth();
+  const isMobile = useIsMobile();
   const [showSettings, setShowSettings] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -89,6 +93,7 @@ export function AppSidebar() {
   const handleNewChat = () => {
     createNewChat();
     setCurrentView('chat');
+    if (isMobile) setMobileMenuOpen(false);
   };
 
   const handleNavClick = (id: string) => {
@@ -98,8 +103,188 @@ export function AppSidebar() {
     } else {
       setCurrentView(id as any);
     }
+    if (isMobile) setMobileMenuOpen(false);
   };
 
+  // Mobile: Bottom navigation + hamburger menu
+  if (isMobile) {
+    return (
+      <>
+        {/* Mobile Header */}
+        <div className="fixed top-0 left-0 right-0 h-14 bg-background/95 backdrop-blur-sm border-b z-40 flex items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center">
+              <Heart className="h-4 w-4 text-primary-foreground" />
+            </div>
+            <span className="font-display font-semibold text-lg">Unmute</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileMenuOpen(true)}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* Mobile Bottom Nav */}
+        <div className="fixed bottom-0 left-0 right-0 h-16 bg-background/95 backdrop-blur-sm border-t z-40 flex items-center justify-around px-2 pb-safe">
+          {mainNavItems.slice(0, 5).map(item => (
+            <button
+              key={item.id}
+              onClick={() => handleNavClick(item.id)}
+              className={cn(
+                "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors min-w-[60px]",
+                currentView === item.id 
+                  ? "text-primary bg-primary/10" 
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <item.icon className="h-5 w-5" />
+              <span className="text-[10px] font-medium">{item.label.split(' ')[0]}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Full Screen Mobile Menu */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, x: '100%' }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="fixed inset-0 z-50 bg-background"
+            >
+              <div className="flex items-center justify-between p-4 border-b">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center">
+                    <Heart className="h-4 w-4 text-primary-foreground" />
+                  </div>
+                  <span className="font-display font-semibold text-lg">Menu</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+
+              <ScrollArea className="h-[calc(100vh-4rem)] pb-20">
+                <div className="p-4 space-y-6">
+                  {/* New Chat */}
+                  <Button 
+                    variant="gradient" 
+                    className="w-full justify-start gap-2" 
+                    onClick={handleNewChat}
+                  >
+                    <Plus className="h-4 w-4" />
+                    New Conversation
+                  </Button>
+
+                  {/* Main Navigation */}
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground px-2 py-2">Main</p>
+                    {mainNavItems.map(item => (
+                      <Button
+                        key={item.id}
+                        variant={currentView === item.id ? 'soft' : 'ghost'}
+                        className="w-full justify-start gap-3 h-12"
+                        onClick={() => handleNavClick(item.id)}
+                      >
+                        <item.icon className="h-5 w-5" />
+                        <div className="flex flex-col items-start">
+                          <span>{item.label}</span>
+                          <span className="text-xs text-muted-foreground">{item.description}</span>
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Tools */}
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground px-2 py-2">Tools</p>
+                    {toolsNavItems.map(item => (
+                      <Button
+                        key={item.id}
+                        variant={currentView === item.id ? 'soft' : 'ghost'}
+                        className="w-full justify-start gap-3 h-12"
+                        onClick={() => handleNavClick(item.id)}
+                      >
+                        <item.icon className="h-5 w-5" />
+                        <div className="flex flex-col items-start">
+                          <span>{item.label}</span>
+                          <span className="text-xs text-muted-foreground">{item.description}</span>
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Professional */}
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground px-2 py-2">Professional</p>
+                    {professionalNavItems.map(item => (
+                      <Button
+                        key={item.id}
+                        variant={currentView === item.id ? 'soft' : 'ghost'}
+                        className="w-full justify-start gap-3 h-12"
+                        onClick={() => handleNavClick(item.id)}
+                      >
+                        <item.icon className="h-5 w-5" />
+                        <div className="flex flex-col items-start">
+                          <span>{item.label}</span>
+                          <span className="text-xs text-muted-foreground">{item.description}</span>
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Parent Section */}
+                  <Button
+                    variant={userType === 'parent' ? 'secondary' : 'outline'}
+                    className="w-full justify-start gap-3 h-12"
+                    onClick={() => handleNavClick('parent')}
+                  >
+                    <Users className="h-5 w-5" />
+                    <div className="flex flex-col items-start">
+                      <span>Parent Section</span>
+                      <span className="text-xs text-muted-foreground">Family tools</span>
+                    </div>
+                  </Button>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-4 border-t">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 gap-2" 
+                      onClick={() => { setShowSettings(true); setMobileMenuOpen(false); }}
+                    >
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 gap-2" 
+                      onClick={handleSignOut}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </Button>
+                  </div>
+                </div>
+              </ScrollArea>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      </>
+    );
+  }
+
+  // Desktop: Collapsed sidebar
   if (!sidebarOpen) {
     return (
       <div className="fixed left-0 top-0 h-full w-14 bg-sidebar border-r border-sidebar-border flex flex-col items-center py-4 z-50">
@@ -167,6 +352,7 @@ export function AppSidebar() {
     );
   }
 
+  // Desktop: Expanded sidebar
   return (
     <div className="fixed left-0 top-0 h-full w-72 bg-sidebar border-r border-sidebar-border flex flex-col z-50">
       {/* Header */}

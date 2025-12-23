@@ -38,7 +38,6 @@ async function streamChat({
   onError: (error: string) => void;
 }) {
   try {
-    // Get the user's JWT token for authenticated requests
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session?.access_token) {
@@ -56,8 +55,24 @@ async function streamChat({
     });
 
     if (!resp.ok) {
-      const errorData = await resp.json().catch(() => ({}));
-      onError(errorData.error || "Failed to get response");
+      let errorMessage = "Failed to get response";
+      try {
+        const errorData = await resp.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch {
+        // If response isn't JSON, use status text
+        errorMessage = resp.statusText || errorMessage;
+      }
+      
+      if (resp.status === 429) {
+        errorMessage = "I'm getting a lot of messages right now. Please try again in a moment.";
+      } else if (resp.status === 402) {
+        errorMessage = "Service temporarily unavailable. Please try again later.";
+      } else if (resp.status === 401) {
+        errorMessage = "Please log in to continue chatting.";
+      }
+      
+      onError(errorMessage);
       return;
     }
 
@@ -70,6 +85,7 @@ async function streamChat({
     const decoder = new TextDecoder();
     let textBuffer = "";
     let streamDone = false;
+    let hasReceivedContent = false;
 
     while (!streamDone) {
       const { done, value } = await reader.read();
@@ -94,7 +110,10 @@ async function streamChat({
         try {
           const parsed = JSON.parse(jsonStr);
           const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-          if (content) onDelta(content);
+          if (content) {
+            hasReceivedContent = true;
+            onDelta(content);
+          }
         } catch {
           textBuffer = line + "\n" + textBuffer;
           break;
@@ -102,9 +121,35 @@ async function streamChat({
       }
     }
 
+    // Flush remaining buffer
+    if (textBuffer.trim()) {
+      for (let raw of textBuffer.split("\n")) {
+        if (!raw) continue;
+        if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+        if (raw.startsWith(":") || raw.trim() === "") continue;
+        if (!raw.startsWith("data: ")) continue;
+        const jsonStr = raw.slice(6).trim();
+        if (jsonStr === "[DONE]") continue;
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          if (content) {
+            hasReceivedContent = true;
+            onDelta(content);
+          }
+        } catch { /* ignore */ }
+      }
+    }
+
+    if (!hasReceivedContent) {
+      onError("No response received. Please try again.");
+      return;
+    }
+
     onDone();
   } catch (error) {
-    onError(error instanceof Error ? error.message : "Connection failed");
+    console.error("Chat stream error:", error);
+    onError(error instanceof Error ? error.message : "Connection failed. Please check your internet and try again.");
   }
 }
 

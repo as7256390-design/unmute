@@ -103,7 +103,7 @@ const Index = () => {
 
   return (
     <MainLayout>
-      <div className="h-screen overflow-y-auto">
+      <div className="h-screen overflow-y-auto pt-14 pb-20 md:pt-0 md:pb-0">
         {renderContent()}
       </div>
       <SOSButton />
