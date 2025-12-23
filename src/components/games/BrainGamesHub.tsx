@@ -22,6 +22,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { DOMAIN_INFO, CognitiveDomain } from '@/types/cognitive';
+import { PatternMatchGame } from './PatternMatchGame';
+import { MemoryGridGame } from './MemoryGridGame';
 
 interface Game {
   id: string;
@@ -49,9 +51,37 @@ interface DomainScore {
   sessions_completed: number;
 }
 
+// Built-in games that are always available
+const BUILT_IN_GAMES: Game[] = [
+  {
+    id: 'pattern-match',
+    name: 'Pattern Match',
+    slug: 'pattern-match',
+    description: 'Find matching patterns based on shape and color. Test your visual attention and pattern recognition!',
+    instructions: 'Look at the target pattern and find the card that matches its shape and color. Size and rotation may vary - focus on the core pattern!',
+    primary_domain: 'attention',
+    secondary_domain: 'speed',
+    icon: '🎯',
+    min_duration_seconds: 60,
+    max_duration_seconds: 120,
+  },
+  {
+    id: 'memory-grid',
+    name: 'Memory Grid',
+    slug: 'memory-grid',
+    description: 'Classic memory matching game. Remember card positions and match pairs to clear levels!',
+    instructions: 'Flip cards to reveal emojis. Remember their positions and match pairs. Clear all pairs to advance to harder levels!',
+    primary_domain: 'memory',
+    secondary_domain: 'attention',
+    icon: '🧠',
+    min_duration_seconds: 90,
+    max_duration_seconds: 180,
+  },
+];
+
 export function BrainGamesHub() {
   const { user } = useAuth();
-  const [games, setGames] = useState<Game[]>([]);
+  const [games, setGames] = useState<Game[]>(BUILT_IN_GAMES);
   const [profile, setProfile] = useState<CognitiveProfile | null>(null);
   const [domainScores, setDomainScores] = useState<DomainScore[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,6 +89,7 @@ export function BrainGamesHub() {
   const [gamePhase, setGamePhase] = useState<'browse' | 'instructions' | 'playing' | 'results'>('browse');
   const [gameScore, setGameScore] = useState(0);
   const [gameAccuracy, setGameAccuracy] = useState(0);
+  const [gameDuration, setGameDuration] = useState(0);
 
   useEffect(() => {
     if (user) {
@@ -69,14 +100,17 @@ export function BrainGamesHub() {
   const loadData = async () => {
     if (!user) return;
 
-    // Load games
+    // Load games from DB and merge with built-in games
     const { data: gamesData } = await supabase
       .from('cognitive_games')
       .select('*')
       .eq('is_active', true);
 
-    if (gamesData) {
-      setGames(gamesData as Game[]);
+    if (gamesData && gamesData.length > 0) {
+      // Merge DB games with built-in games, avoiding duplicates by slug
+      const dbSlugs = new Set(gamesData.map((g: any) => g.slug));
+      const filteredBuiltIn = BUILT_IN_GAMES.filter(g => !dbSlugs.has(g.slug));
+      setGames([...filteredBuiltIn, ...(gamesData as Game[])]);
     }
 
     // Load profile
@@ -110,32 +144,37 @@ export function BrainGamesHub() {
 
   const beginPlaying = () => {
     setGamePhase('playing');
-    // Simulate a game session for demo
-    setTimeout(() => {
-      const score = Math.floor(Math.random() * 500) + 200;
-      const accuracy = Math.floor(Math.random() * 30) + 70;
-      setGameScore(score);
-      setGameAccuracy(accuracy);
-      setGamePhase('results');
-      saveSession(score, accuracy);
-    }, 3000);
   };
 
-  const saveSession = async (score: number, accuracy: number) => {
+  const handleGameComplete = (score: number, accuracy: number, duration: number) => {
+    setGameScore(score);
+    setGameAccuracy(accuracy);
+    setGameDuration(duration);
+    setGamePhase('results');
+    saveSession(score, accuracy, duration);
+  };
+
+  const saveSession = async (score: number, accuracy: number, duration: number) => {
     if (!user || !selectedGame) return;
 
-    await supabase.from('cognitive_sessions').insert({
-      user_id: user.id,
-      game_id: selectedGame.id,
-      score,
-      accuracy,
-      completed_at: new Date().toISOString(),
-      duration_seconds: 90,
-      starting_difficulty: 1.0,
-      ending_difficulty: 1.2,
-      correct_responses: Math.floor(accuracy / 10),
-      incorrect_responses: 10 - Math.floor(accuracy / 10),
-    });
+    // Try to save to DB (may fail for built-in games without DB entry)
+    try {
+      await supabase.from('cognitive_sessions').insert({
+        user_id: user.id,
+        game_id: selectedGame.id,
+        score,
+        accuracy,
+        completed_at: new Date().toISOString(),
+        duration_seconds: duration,
+        starting_difficulty: 1.0,
+        ending_difficulty: 1.5,
+        correct_responses: Math.floor((accuracy / 100) * 20),
+        incorrect_responses: 20 - Math.floor((accuracy / 100) * 20),
+      });
+    } catch (error) {
+      // Built-in games may not have a valid game_id in DB, that's ok
+      console.log('Session save skipped for built-in game');
+    }
 
     toast.success(`Great job! You scored ${score} points!`);
   };
@@ -145,6 +184,7 @@ export function BrainGamesHub() {
     setGamePhase('browse');
     setGameScore(0);
     setGameAccuracy(0);
+    setGameDuration(0);
     loadData();
   };
 
@@ -218,8 +258,27 @@ export function BrainGamesHub() {
     );
   }
 
-  // Playing phase
+  // Playing phase - render actual game components
   if (gamePhase === 'playing' && selectedGame) {
+    if (selectedGame.slug === 'pattern-match') {
+      return (
+        <PatternMatchGame
+          onComplete={handleGameComplete}
+          onQuit={backToBrowse}
+        />
+      );
+    }
+    
+    if (selectedGame.slug === 'memory-grid') {
+      return (
+        <MemoryGridGame
+          onComplete={handleGameComplete}
+          onQuit={backToBrowse}
+        />
+      );
+    }
+
+    // Fallback for other games (simulated)
     return (
       <div className="h-full flex items-center justify-center p-6">
         <motion.div
@@ -232,17 +291,11 @@ export function BrainGamesHub() {
           </div>
           <div>
             <h2 className="text-2xl font-bold">{selectedGame.name}</h2>
-            <p className="text-muted-foreground">Game in progress...</p>
+            <p className="text-muted-foreground">Coming soon...</p>
           </div>
-          <div className="flex justify-center gap-4">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-primary">0:03</div>
-              <div className="text-xs text-muted-foreground">Time</div>
-            </div>
-          </div>
-          <p className="text-sm text-muted-foreground animate-pulse">
-            Simulating game session...
-          </p>
+          <Button variant="outline" onClick={backToBrowse}>
+            Back to Games
+          </Button>
         </motion.div>
       </div>
     );
