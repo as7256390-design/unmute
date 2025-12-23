@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Phone, X, Heart, MessageCircle, ExternalLink } from 'lucide-react';
+import { Phone, X, Heart, ExternalLink, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { NearbyEmergencyHelp } from '@/components/emergency/NearbyEmergencyHelp';
 
 const emergencyResources = [
   { 
@@ -63,9 +64,20 @@ export function SOSButton() {
               </Button>
             </div>
 
-            <p className="text-muted-foreground mb-6">
+            <p className="text-muted-foreground mb-4">
               You're not alone. These people are trained to listen and help. No judgment, just support.
             </p>
+
+            {/* Nearby Emergency Help Button */}
+            <div className="mb-4 p-3 bg-muted/50 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-red-500" />
+                  <span className="text-sm font-medium">Find nearby help</span>
+                </div>
+                <NearbyEmergencyHelp />
+              </div>
+            </div>
 
             <div className="space-y-3">
               {emergencyResources.map((resource, index) => (
