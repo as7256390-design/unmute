@@ -75,6 +75,7 @@ const Index = () => {
       case 'parent':
         return <ParentInterface />;
       case 'mood-tracker':
+      case 'mood':
         return <MoodTracker />;
       case 'wellness':
         return <WellnessTools />;

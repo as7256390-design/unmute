@@ -634,6 +634,39 @@ export type Database = {
         }
         Relationships: []
       }
+      journal_entries: {
+        Row: {
+          content: string
+          created_at: string
+          has_response: boolean | null
+          id: string
+          mood: string
+          response_text: string | null
+          user_id: string
+          wants_response: boolean | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          has_response?: boolean | null
+          id?: string
+          mood: string
+          response_text?: string | null
+          user_id: string
+          wants_response?: boolean | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          has_response?: boolean | null
+          id?: string
+          mood?: string
+          response_text?: string | null
+          user_id?: string
+          wants_response?: boolean | null
+        }
+        Relationships: []
+      }
       mood_logs: {
         Row: {
           created_at: string

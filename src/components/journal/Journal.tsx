@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { BookHeart, Send, Mic, Calendar, Sparkles, Clock, ChevronDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { BookHeart, Send, Mic, Calendar, Sparkles, Clock, ChevronDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -8,6 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { EmotionalState } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 const moodOptions: { id: EmotionalState; emoji: string; label: string }[] = [
   { id: 'anxious', emoji: '😟', label: 'Anxious' },
@@ -18,61 +21,112 @@ const moodOptions: { id: EmotionalState; emoji: string; label: string }[] = [
   { id: 'neutral', emoji: '😌', label: 'Okay' },
 ];
 
-const mockEntries = [
-  {
-    id: '1',
-    content: "Today was tough. Had a fight with my roommate and couldn't focus on studies at all. I just want to go home sometimes.",
-    mood: 'sad' as EmotionalState,
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    wantsResponse: true,
-    hasResponse: true,
-  },
-  {
-    id: '2',
-    content: "Small win today - finished my assignment before deadline! It feels good to accomplish something.",
-    mood: 'hopeful' as EmotionalState,
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48),
-    wantsResponse: false,
-    hasResponse: false,
-  },
-  {
-    id: '3',
-    content: "Can't sleep again. Mind keeps racing about what I said in class today. Why do I overthink everything?",
-    mood: 'anxious' as EmotionalState,
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72),
-    wantsResponse: true,
-    hasResponse: true,
-  },
-];
+interface JournalEntry {
+  id: string;
+  content: string;
+  mood: string;
+  created_at: string;
+  wants_response: boolean;
+  has_response: boolean;
+  response_text?: string | null;
+}
 
 export function Journal() {
+  const { user } = useAuth();
   const [newEntry, setNewEntry] = useState('');
   const [selectedMood, setSelectedMood] = useState<EmotionalState | null>(null);
   const [wantsResponse, setWantsResponse] = useState(false);
-  const [entries, setEntries] = useState(mockEntries);
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    if (!newEntry.trim() || !selectedMood) return;
-    
-    const entry = {
-      id: crypto.randomUUID(),
-      content: newEntry.trim(),
-      mood: selectedMood,
-      timestamp: new Date(),
-      wantsResponse,
-      hasResponse: false,
-    };
-    
-    setEntries([entry, ...entries]);
-    setNewEntry('');
-    setSelectedMood(null);
-    setWantsResponse(false);
+  useEffect(() => {
+    if (user) {
+      loadEntries();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
+
+  const loadEntries = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('journal_entries')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading journal entries:', error);
+      toast.error('Failed to load journal entries');
+    } else {
+      setEntries(data || []);
+    }
+    setLoading(false);
   };
 
-  const getMoodEmoji = (mood: EmotionalState) => {
+  const handleSubmit = async () => {
+    if (!newEntry.trim() || !selectedMood || !user) return;
+
+    setSubmitting(true);
+    
+    const { data, error } = await supabase
+      .from('journal_entries')
+      .insert({
+        user_id: user.id,
+        content: newEntry.trim(),
+        mood: selectedMood,
+        wants_response: wantsResponse,
+        has_response: false
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error saving journal entry:', error);
+      toast.error('Failed to save entry');
+    } else {
+      setEntries([data, ...entries]);
+      setNewEntry('');
+      setSelectedMood(null);
+      setWantsResponse(false);
+      toast.success('Entry saved! Keep writing 💙');
+      
+      // Update gamification
+      const { data: stats } = await supabase
+        .from('user_gamification')
+        .select('total_journal_entries, xp_points')
+        .eq('user_id', user.id)
+        .single();
+
+      if (stats) {
+        await supabase
+          .from('user_gamification')
+          .update({ 
+            total_journal_entries: (stats.total_journal_entries || 0) + 1,
+            xp_points: (stats.xp_points || 0) + 10
+          })
+          .eq('user_id', user.id);
+      }
+    }
+    setSubmitting(false);
+  };
+
+  const getMoodEmoji = (mood: string) => {
     return moodOptions.find(m => m.id === mood)?.emoji || '😌';
   };
+
+  if (!user) {
+    return (
+      <div className="max-w-2xl mx-auto p-6 text-center">
+        <BookHeart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+        <h2 className="font-display text-xl font-semibold mb-2">Sign in to use your Journal</h2>
+        <p className="text-muted-foreground">Your entries are private and secure.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-6">
@@ -141,10 +195,14 @@ export function Journal() {
             <Button 
               variant="gradient" 
               onClick={handleSubmit}
-              disabled={!newEntry.trim() || !selectedMood}
+              disabled={!newEntry.trim() || !selectedMood || submitting}
               className="gap-2"
             >
-              <Send className="h-4 w-4" />
+              {submitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
               Save Entry
             </Button>
           </div>
@@ -167,37 +225,54 @@ export function Journal() {
       {/* History */}
       {showHistory && (
         <div className="space-y-4">
-          {entries.map((entry, index) => (
-            <div 
-              key={entry.id} 
-              className="glass rounded-2xl p-5 animate-slide-up"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">{getMoodEmoji(entry.mood)}</span>
-                  <div>
-                    <p className="text-sm font-medium">{format(entry.timestamp, 'EEEE, MMMM d')}</p>
-                    <p className="text-xs text-muted-foreground">{format(entry.timestamp, 'h:mm a')}</p>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : entries.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <BookHeart className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p>No entries yet. Start writing!</p>
+            </div>
+          ) : (
+            entries.map((entry, index) => (
+              <div 
+                key={entry.id} 
+                className="glass rounded-2xl p-5 animate-slide-up"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">{getMoodEmoji(entry.mood)}</span>
+                    <div>
+                      <p className="text-sm font-medium">{format(new Date(entry.created_at), 'EEEE, MMMM d')}</p>
+                      <p className="text-xs text-muted-foreground">{format(new Date(entry.created_at), 'h:mm a')}</p>
+                    </div>
                   </div>
+                  {entry.has_response && (
+                    <Badge variant="secondary" className="bg-primary/10 text-primary">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Response received
+                    </Badge>
+                  )}
+                  {entry.wants_response && !entry.has_response && (
+                    <Badge variant="secondary">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Awaiting response
+                    </Badge>
+                  )}
                 </div>
-                {entry.hasResponse && (
-                  <Badge variant="secondary" className="bg-primary/10 text-primary">
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    Response received
-                  </Badge>
-                )}
-                {entry.wantsResponse && !entry.hasResponse && (
-                  <Badge variant="secondary">
-                    <Clock className="h-3 w-3 mr-1" />
-                    Awaiting response
-                  </Badge>
+                
+                <p className="text-foreground leading-relaxed">{entry.content}</p>
+                
+                {entry.response_text && (
+                  <div className="mt-4 p-3 bg-primary/5 rounded-lg border-l-2 border-primary">
+                    <p className="text-sm text-muted-foreground">{entry.response_text}</p>
+                  </div>
                 )}
               </div>
-              
-              <p className="text-foreground leading-relaxed">{entry.content}</p>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       )}
 
