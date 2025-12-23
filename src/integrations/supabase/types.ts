@@ -109,6 +109,229 @@ export type Database = {
           },
         ]
       }
+      cognitive_domains: {
+        Row: {
+          created_at: string
+          domain: string
+          id: string
+          last_practiced_at: string | null
+          proficiency_score: number
+          sessions_completed: number
+          total_practice_time_seconds: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+          id?: string
+          last_practiced_at?: string | null
+          proficiency_score?: number
+          sessions_completed?: number
+          total_practice_time_seconds?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          id?: string
+          last_practiced_at?: string | null
+          proficiency_score?: number
+          sessions_completed?: number
+          total_practice_time_seconds?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      cognitive_games: {
+        Row: {
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          instructions: string
+          is_active: boolean
+          max_duration_seconds: number
+          min_duration_seconds: number
+          name: string
+          primary_domain: string
+          secondary_domain: string | null
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          icon?: string
+          id?: string
+          instructions: string
+          is_active?: boolean
+          max_duration_seconds?: number
+          min_duration_seconds?: number
+          name: string
+          primary_domain: string
+          secondary_domain?: string | null
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          instructions?: string
+          is_active?: boolean
+          max_duration_seconds?: number
+          min_duration_seconds?: number
+          name?: string
+          primary_domain?: string
+          secondary_domain?: string | null
+          slug?: string
+        }
+        Relationships: []
+      }
+      cognitive_personal_bests: {
+        Row: {
+          achieved_at: string
+          best_accuracy: number | null
+          best_reaction_time_ms: number | null
+          best_score: number | null
+          game_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          achieved_at?: string
+          best_accuracy?: number | null
+          best_reaction_time_ms?: number | null
+          best_score?: number | null
+          game_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          achieved_at?: string
+          best_accuracy?: number | null
+          best_reaction_time_ms?: number | null
+          best_score?: number | null
+          game_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cognitive_personal_bests_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "cognitive_games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cognitive_profiles: {
+        Row: {
+          created_at: string
+          current_streak: number
+          id: string
+          last_session_date: string | null
+          longest_streak: number
+          preferred_session_length: string | null
+          total_practice_time_seconds: number
+          total_sessions: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_session_date?: string | null
+          longest_streak?: number
+          preferred_session_length?: string | null
+          total_practice_time_seconds?: number
+          total_sessions?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_session_date?: string | null
+          longest_streak?: number
+          preferred_session_length?: string | null
+          total_practice_time_seconds?: number
+          total_sessions?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      cognitive_sessions: {
+        Row: {
+          accuracy: number | null
+          avg_reaction_time_ms: number | null
+          completed_at: string | null
+          correct_responses: number | null
+          domain_points_earned: number | null
+          duration_seconds: number | null
+          ending_difficulty: number | null
+          feedback_shown: boolean | null
+          game_id: string
+          id: string
+          incorrect_responses: number | null
+          score: number | null
+          session_data: Json | null
+          started_at: string
+          starting_difficulty: number
+          user_id: string
+        }
+        Insert: {
+          accuracy?: number | null
+          avg_reaction_time_ms?: number | null
+          completed_at?: string | null
+          correct_responses?: number | null
+          domain_points_earned?: number | null
+          duration_seconds?: number | null
+          ending_difficulty?: number | null
+          feedback_shown?: boolean | null
+          game_id: string
+          id?: string
+          incorrect_responses?: number | null
+          score?: number | null
+          session_data?: Json | null
+          started_at?: string
+          starting_difficulty?: number
+          user_id: string
+        }
+        Update: {
+          accuracy?: number | null
+          avg_reaction_time_ms?: number | null
+          completed_at?: string | null
+          correct_responses?: number | null
+          domain_points_earned?: number | null
+          duration_seconds?: number | null
+          ending_difficulty?: number | null
+          feedback_shown?: boolean | null
+          game_id?: string
+          id?: string
+          incorrect_responses?: number | null
+          score?: number | null
+          session_data?: Json | null
+          started_at?: string
+          starting_difficulty?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cognitive_sessions_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "cognitive_games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string
