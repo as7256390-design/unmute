@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Building2, 
@@ -17,12 +16,28 @@ import {
   Copy,
   BarChart3,
   Shield,
-  Heart
+  Heart,
+  Trash2,
+  UserMinus,
+  Calendar
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Institution {
   id: string;
@@ -42,6 +57,12 @@ interface MoodStat {
   crisis_alerts_count: number;
 }
 
+interface Member {
+  id: string;
+  role: string;
+  joined_at: string;
+}
+
 const COLORS = ['hsl(var(--safe))', 'hsl(var(--warning))', 'hsl(var(--destructive))'];
 
 export function InstitutionDashboard() {
@@ -49,9 +70,11 @@ export function InstitutionDashboard() {
   const [institution, setInstitution] = useState<Institution | null>(null);
   const [moodStats, setMoodStats] = useState<MoodStat[]>([]);
   const [memberCount, setMemberCount] = useState(0);
+  const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [newInstitution, setNewInstitution] = useState({ name: '', type: 'school' });
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -62,16 +85,23 @@ export function InstitutionDashboard() {
   const loadInstitution = async () => {
     if (!user) return;
 
-    const { data: inst } = await supabase
+    const { data: inst, error } = await supabase
       .from('institutions')
       .select('*')
       .eq('admin_user_id', user.id)
-      .single();
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error loading institution:', error);
+      toast.error('Failed to load institution data');
+      setLoading(false);
+      return;
+    }
 
     if (inst) {
       setInstitution(inst);
       loadStats(inst.id);
-      loadMemberCount(inst.id);
+      loadMembers(inst.id);
     } else {
       setShowCreate(true);
     }
@@ -91,13 +121,17 @@ export function InstitutionDashboard() {
     }
   };
 
-  const loadMemberCount = async (institutionId: string) => {
-    const { count } = await supabase
+  const loadMembers = async (institutionId: string) => {
+    const { data, count } = await supabase
       .from('institution_members')
-      .select('*', { count: 'exact', head: true })
-      .eq('institution_id', institutionId);
+      .select('id, role, joined_at', { count: 'exact' })
+      .eq('institution_id', institutionId)
+      .order('joined_at', { ascending: false });
 
-    setMemberCount(count || 0);
+    if (data) {
+      setMembers(data);
+      setMemberCount(count || data.length);
+    }
   };
 
   const createInstitution = async () => {
@@ -117,6 +151,7 @@ export function InstitutionDashboard() {
       .single();
 
     if (error) {
+      console.error('Error creating institution:', error);
       toast.error('Failed to create institution');
       return;
     }
@@ -124,6 +159,27 @@ export function InstitutionDashboard() {
     setInstitution(data);
     setShowCreate(false);
     toast.success('Institution created successfully!');
+  };
+
+  const removeMember = async (memberId: string) => {
+    if (!institution) return;
+    
+    setRemovingMemberId(memberId);
+    
+    const { error } = await supabase
+      .from('institution_members')
+      .delete()
+      .eq('id', memberId);
+
+    if (error) {
+      console.error('Error removing member:', error);
+      toast.error('Failed to remove member');
+    } else {
+      toast.success('Member removed successfully');
+      loadMembers(institution.id);
+    }
+    
+    setRemovingMemberId(null);
   };
 
   const copyCode = () => {
@@ -153,6 +209,45 @@ export function InstitutionDashboard() {
     a.download = `wellness-report-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     toast.success('Report downloaded!');
+  };
+
+  const exportMemberStats = () => {
+    if (!members.length) {
+      toast.error('No members to export');
+      return;
+    }
+
+    // Group by role
+    const roleCount: Record<string, number> = {};
+    const joinsByMonth: Record<string, number> = {};
+    
+    members.forEach(m => {
+      roleCount[m.role] = (roleCount[m.role] || 0) + 1;
+      const month = new Date(m.joined_at).toISOString().slice(0, 7);
+      joinsByMonth[month] = (joinsByMonth[month] || 0) + 1;
+    });
+
+    const csv = [
+      '# Member Statistics Report',
+      `# Generated: ${new Date().toISOString()}`,
+      `# Institution: ${institution?.name}`,
+      '',
+      'Role,Count',
+      ...Object.entries(roleCount).map(([role, count]) => `${role},${count}`),
+      '',
+      'Month,New Members',
+      ...Object.entries(joinsByMonth).sort().map(([month, count]) => `${month},${count}`),
+      '',
+      `Total Members,${members.length}`
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `member-stats-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    toast.success('Member statistics exported!');
   };
 
   if (loading) {
@@ -222,6 +317,12 @@ export function InstitutionDashboard() {
     { name: 'Medium', value: latestStats.stress_medium_count, color: 'hsl(var(--warning))' },
     { name: 'High', value: latestStats.stress_high_count, color: 'hsl(var(--destructive))' },
   ] : [];
+
+  // Calculate member stats
+  const roleCount: Record<string, number> = {};
+  members.forEach(m => {
+    roleCount[m.role] = (roleCount[m.role] || 0) + 1;
+  });
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -321,12 +422,16 @@ export function InstitutionDashboard() {
         </Card>
       </div>
 
-      {/* Charts */}
+      {/* Charts & Members */}
       <Tabs defaultValue="trends" className="w-full">
         <TabsList>
           <TabsTrigger value="trends">Mood Trends</TabsTrigger>
           <TabsTrigger value="stress">Stress Distribution</TabsTrigger>
           <TabsTrigger value="engagement">Engagement</TabsTrigger>
+          <TabsTrigger value="members">
+            <Users className="h-4 w-4 mr-1" />
+            Members ({memberCount})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="trends">
@@ -452,6 +557,120 @@ export function InstitutionDashboard() {
               ) : (
                 <div className="h-[300px] flex items-center justify-center text-muted-foreground">
                   <p>No engagement data yet.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="members">
+          <Card className="glass">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Member Management</CardTitle>
+                  <CardDescription>Manage institution members (anonymized view - no personal data)</CardDescription>
+                </div>
+                <Button variant="outline" onClick={exportMemberStats}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Stats
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Role Summary */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {Object.entries(roleCount).map(([role, count]) => (
+                  <div key={role} className="p-4 rounded-lg bg-muted/50">
+                    <p className="text-sm text-muted-foreground capitalize">{role}s</p>
+                    <p className="text-2xl font-bold">{count}</p>
+                  </div>
+                ))}
+                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                  <p className="text-sm text-muted-foreground">Total</p>
+                  <p className="text-2xl font-bold">{memberCount}</p>
+                </div>
+              </div>
+
+              {/* Members Table */}
+              {members.length > 0 ? (
+                <ScrollArea className="h-[400px] rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-16">#</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Joined</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {members.map((member, index) => (
+                        <TableRow key={member.id}>
+                          <TableCell className="font-mono text-muted-foreground">
+                            {index + 1}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              {member.role}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(member.joined_at).toLocaleDateString()}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  disabled={removingMemberId === member.id}
+                                >
+                                  {removingMemberId === member.id ? (
+                                    <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                                  ) : (
+                                    <UserMinus className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Remove Member</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to remove this member from your institution? 
+                                    They will need to rejoin using the join code.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => removeMember(member.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Remove
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              ) : (
+                <div className="h-[200px] flex flex-col items-center justify-center text-muted-foreground gap-3">
+                  <Users className="h-12 w-12 opacity-20" />
+                  <p>No members yet. Share your join code to invite students!</p>
+                  <Button variant="outline" size="sm" onClick={copyCode}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy Join Code
+                  </Button>
                 </div>
               )}
             </CardContent>
