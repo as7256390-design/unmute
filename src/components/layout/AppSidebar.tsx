@@ -23,7 +23,9 @@ import {
   Calendar,
   GraduationCap,
   Moon,
-  Building2
+  Building2,
+  Brain,
+  Gamepad2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/contexts/AppContext';
@@ -37,11 +39,11 @@ import { LanguageSelector } from '@/components/settings/LanguageSelector';
 
 const mainNavItems = [
   { id: 'chat', label: 'Chat', icon: MessageCircle, description: 'Talk to someone' },
+  { id: 'brain-games', label: 'Brain Games', icon: Gamepad2, description: 'Train your mind', highlight: true },
   { id: 'support-rooms', label: 'Support Rooms', icon: Users, description: 'Join themed rooms' },
   { id: 'wall', label: 'Support Wall', icon: Heart, description: 'Anonymous sharing' },
   { id: 'journal', label: 'Journal', icon: BookHeart, description: 'Private reflection' },
   { id: 'dashboard', label: 'My Growth', icon: BarChart3, description: 'Track progress' },
-  { id: 'gamification', label: 'Achievements', icon: Trophy, description: 'Badges & XP' },
 ];
 
 const toolsNavItems = [
@@ -49,6 +51,7 @@ const toolsNavItems = [
   { id: 'wellness', label: 'Wellness Tools', icon: Wind, description: 'Breathing & more' },
   { id: 'programs', label: 'Guided Programs', icon: Target, description: 'Structured wellness' },
   { id: 'relaxation', label: 'Sleep & Relax', icon: Moon, description: 'Calm content' },
+  { id: 'gamification', label: 'Achievements', icon: Trophy, description: 'Badges & XP' },
   { id: 'alignment', label: 'Family Alignment', icon: UserCheck, description: 'Parent-child gap' },
   { id: 'assessments', label: 'Mental Health Check', icon: Sparkles, description: 'PHQ-9 & GAD-7' },
   { id: 'emotional-form', label: 'Emotional Profile', icon: ClipboardList, description: 'Deep self-assessment' },
@@ -200,12 +203,18 @@ export function AppSidebar() {
           {mainNavItems.map(item => (
             <Button
               key={item.id}
-              variant={currentView === item.id ? 'soft' : 'ghost'}
-              className="w-full justify-start gap-3 h-10"
+              variant={currentView === item.id ? 'soft' : item.highlight ? 'outline' : 'ghost'}
+              className={cn(
+                "w-full justify-start gap-3 h-10",
+                item.highlight && currentView !== item.id && "border-primary/50 bg-primary/5 hover:bg-primary/10"
+              )}
               onClick={() => handleNavClick(item.id)}
             >
-              <item.icon className="h-4 w-4" />
+              <item.icon className={cn("h-4 w-4", item.highlight && "text-primary")} />
               <span>{item.label}</span>
+              {item.highlight && currentView !== item.id && (
+                <span className="ml-auto text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">NEW</span>
+              )}
             </Button>
           ))}
         </div>
