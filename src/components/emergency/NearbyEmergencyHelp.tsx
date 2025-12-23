@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
-import { MapPin, Hospital, Building2, Pill, Shield, Loader2, Navigation, AlertTriangle, Map, List } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { MapPin, Hospital, Building2, Pill, Shield, Loader2, Navigation, AlertTriangle, Map, List, WifiOff, RefreshCw, Clock, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { EmergencyMap } from './EmergencyMap';
+import { useEmergencyCache } from '@/hooks/useEmergencyCache';
 
 interface Location {
   id: string;
@@ -44,13 +46,40 @@ export function NearbyEmergencyHelp() {
   const [error, setError] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
   const [activeTab, setActiveTab] = useState<string>('map');
+  const [isUsingCache, setIsUsingCache] = useState(false);
+
+  const { isOnline, cachedData, saveToCache, getCacheAge, hasCachedData } = useEmergencyCache();
+
+  // Load cached data when offline or on error
+  const loadFromCache = () => {
+    if (cachedData) {
+      setLocations(cachedData.locations);
+      setUserLocation(cachedData.userLocation);
+      setIsUsingCache(true);
+      toast.info('Showing cached emergency locations');
+    }
+  };
 
   const fetchNearbyLocations = async () => {
     setLoading(true);
     setError(null);
     setLocations([]);
     setUserLocation(null);
+    setIsUsingCache(false);
     setIsOpen(true);
+
+    // If offline, immediately load from cache
+    if (!isOnline) {
+      if (hasCachedData) {
+        loadFromCache();
+        setLoading(false);
+        return;
+      } else {
+        setError('You are offline and no cached data is available. Connect to the internet to fetch nearby locations.');
+        setLoading(false);
+        return;
+      }
+    }
 
     try {
       if (!navigator.geolocation) {
@@ -81,12 +110,18 @@ export function NearbyEmergencyHelp() {
         throw new Error(data.error);
       }
 
-      setLocations(data?.locations || []);
+      const fetchedLocations = data?.locations || [];
+      setLocations(fetchedLocations);
       
-      if (data?.locations?.length === 0) {
+      // Save to cache for offline use
+      if (fetchedLocations.length > 0) {
+        saveToCache(fetchedLocations, { lat: latitude, lon: longitude });
+      }
+      
+      if (fetchedLocations.length === 0) {
         toast.info('No emergency or medical services found nearby');
       } else {
-        toast.success(`Found ${data.locations.length} nearby locations`);
+        toast.success(`Found ${fetchedLocations.length} nearby locations (cached for offline use)`);
       }
 
     } catch (err: any) {
@@ -104,8 +139,14 @@ export function NearbyEmergencyHelp() {
         errorMessage = err.message;
       }
       
-      setError(errorMessage);
-      toast.error(errorMessage);
+      // If fetch fails and we have cached data, offer to use it
+      if (hasCachedData) {
+        loadFromCache();
+        toast.warning('Using cached data due to network error');
+      } else {
+        setError(errorMessage);
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -140,10 +181,12 @@ export function NearbyEmergencyHelp() {
       >
         {loading ? (
           <Loader2 className="h-4 w-4 animate-spin" />
+        ) : !isOnline && hasCachedData ? (
+          <Database className="h-4 w-4" />
         ) : (
           <MapPin className="h-4 w-4" />
         )}
-        Nearby Help
+        {!isOnline && hasCachedData ? 'Cached Help' : 'Nearby Help'}
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -156,6 +199,34 @@ export function NearbyEmergencyHelp() {
           </DialogHeader>
 
           <div className="p-6 pt-4">
+            {/* Offline / Cache Status Banner */}
+            {!isOnline && (
+              <Alert className="mb-4 border-amber-500/50 bg-amber-50 dark:bg-amber-900/20">
+                <WifiOff className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800 dark:text-amber-200">
+                  You are currently offline. {hasCachedData ? 'Showing cached emergency locations.' : 'No cached data available.'}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {isUsingCache && isOnline && (
+              <Alert className="mb-4 border-blue-500/50 bg-blue-50 dark:bg-blue-900/20">
+                <Clock className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800 dark:text-blue-200 flex items-center justify-between">
+                  <span>Showing cached data from {getCacheAge()}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="gap-1.5 h-7"
+                    onClick={fetchNearbyLocations}
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Refresh
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {loading && (
               <div className="flex flex-col items-center justify-center py-12 gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -167,9 +238,19 @@ export function NearbyEmergencyHelp() {
               <div className="flex flex-col items-center justify-center py-12 gap-4">
                 <AlertTriangle className="h-10 w-10 text-destructive" />
                 <p className="text-center text-muted-foreground">{error}</p>
-                <Button onClick={fetchNearbyLocations} variant="outline">
-                  Try Again
-                </Button>
+                <div className="flex gap-2">
+                  {hasCachedData && (
+                    <Button onClick={loadFromCache} variant="outline" className="gap-2">
+                      <Database className="h-4 w-4" />
+                      Use Cached Data
+                    </Button>
+                  )}
+                  {isOnline && (
+                    <Button onClick={fetchNearbyLocations} variant="outline">
+                      Try Again
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -179,6 +260,12 @@ export function NearbyEmergencyHelp() {
                 <p className="text-center text-muted-foreground">
                   No nearby services found within 5km radius
                 </p>
+                {hasCachedData && (
+                  <Button onClick={loadFromCache} variant="outline" className="gap-2">
+                    <Database className="h-4 w-4" />
+                    View Cached Locations
+                  </Button>
+                )}
               </div>
             )}
 
