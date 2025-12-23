@@ -21,6 +21,7 @@ import { CounselorBooking } from '@/components/counselor/CounselorBooking';
 import { PeerListenerTraining } from '@/components/training/PeerListenerTraining';
 import { RelaxationContent } from '@/components/relaxation/RelaxationContent';
 import { InstitutionDashboard } from '@/components/institution/InstitutionDashboard';
+import { BrainGamesHub } from '@/components/games/BrainGamesHub';
 import { SOSButton } from '@/components/crisis/SOSButton';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { Loader2 } from 'lucide-react';
@@ -56,6 +57,8 @@ const Index = () => {
     switch (currentView) {
       case 'chat':
         return <ChatInterface />;
+      case 'brain-games':
+        return <BrainGamesHub />;
       case 'emotional-form':
         return <EmotionalProfileForm />;
       case 'assessments':
