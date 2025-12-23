@@ -1,22 +1,17 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// Allowed origins for CORS - restrict to production and preview URLs
-const ALLOWED_ORIGINS = [
-  "https://lgfewsifdmhodjdxojck.lovableproject.com",
-  "https://lovable.dev",
-  "http://localhost:5173",
-  "http://localhost:8080",
-];
-
+// CORS headers - allow lovableproject.com subdomains
 function getCorsHeaders(origin: string | null) {
-  // Use exact origin matching to prevent subdomain bypass attacks
-  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin)
-    ? origin
-    : ALLOWED_ORIGINS[0];
+  // Allow any lovableproject.com subdomain, localhost, and lovable.dev
+  const isAllowed = origin && (
+    origin.endsWith('.lovableproject.com') ||
+    origin.includes('localhost') ||
+    origin === 'https://lovable.dev'
+  );
   
   return {
-    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Origin": isAllowed ? origin : "https://lovable.dev",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
   };
