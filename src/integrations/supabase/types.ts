@@ -634,6 +634,39 @@ export type Database = {
         }
         Relationships: []
       }
+      emergency_contacts: {
+        Row: {
+          created_at: string
+          id: string
+          is_primary: boolean | null
+          name: string
+          phone: string
+          relationship: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean | null
+          name: string
+          phone: string
+          relationship?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean | null
+          name?: string
+          phone?: string
+          relationship?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       institution_members: {
         Row: {
           id: string
@@ -805,6 +838,33 @@ export type Database = {
           mood_score?: number
           notes?: string | null
           stress_level?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      panic_alerts: {
+        Row: {
+          contacts_notified: number | null
+          created_at: string
+          id: string
+          latitude: number
+          longitude: number
+          user_id: string
+        }
+        Insert: {
+          contacts_notified?: number | null
+          created_at?: string
+          id?: string
+          latitude: number
+          longitude: number
+          user_id: string
+        }
+        Update: {
+          contacts_notified?: number | null
+          created_at?: string
+          id?: string
+          latitude?: number
+          longitude?: number
           user_id?: string
         }
         Relationships: []
