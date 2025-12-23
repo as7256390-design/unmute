@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      alignment_responses: {
+        Row: {
+          area_id: string
+          connection_id: string | null
+          created_at: string
+          id: string
+          score: number
+          user_id: string
+          user_type: string
+        }
+        Insert: {
+          area_id: string
+          connection_id?: string | null
+          created_at?: string
+          id?: string
+          score: number
+          user_id: string
+          user_type: string
+        }
+        Update: {
+          area_id?: string
+          connection_id?: string | null
+          created_at?: string
+          id?: string
+          score?: number
+          user_id?: string
+          user_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alignment_responses_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "parent_child_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_settings: {
         Row: {
           created_at: string
@@ -105,6 +143,44 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      child_mood_sharing: {
+        Row: {
+          child_user_id: string
+          connection_id: string
+          id: string
+          share_mood: boolean
+          share_mood_history: boolean
+          share_weekly_summary: boolean
+          updated_at: string
+        }
+        Insert: {
+          child_user_id: string
+          connection_id: string
+          id?: string
+          share_mood?: boolean
+          share_mood_history?: boolean
+          share_weekly_summary?: boolean
+          updated_at?: string
+        }
+        Update: {
+          child_user_id?: string
+          connection_id?: string
+          id?: string
+          share_mood?: boolean
+          share_mood_history?: boolean
+          share_weekly_summary?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "child_mood_sharing_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "parent_child_connections"
             referencedColumns: ["id"]
           },
         ]
@@ -700,6 +776,108 @@ export type Database = {
         }
         Relationships: []
       }
+      parent_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      parent_child_connections: {
+        Row: {
+          child_user_id: string
+          connected_at: string | null
+          connection_code: string
+          created_at: string
+          id: string
+          parent_user_id: string
+          status: string
+        }
+        Insert: {
+          child_user_id: string
+          connected_at?: string | null
+          connection_code: string
+          created_at?: string
+          id?: string
+          parent_user_id: string
+          status?: string
+        }
+        Update: {
+          child_user_id?: string
+          connected_at?: string | null
+          connection_code?: string
+          created_at?: string
+          id?: string
+          parent_user_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      parent_journal_entries: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          prompt: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          prompt?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          prompt?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      parent_module_progress: {
+        Row: {
+          completed_at: string | null
+          id: string
+          module_id: string
+          progress: number
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: string
+          module_id: string
+          progress?: number
+          started_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          id?: string
+          module_id?: string
+          progress?: number
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       peer_listeners: {
         Row: {
           certified_at: string | null
@@ -1272,6 +1450,41 @@ export type Database = {
             columns: ["module_id"]
             isOneToOne: false
             referencedRelation: "training_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weekly_reflections: {
+        Row: {
+          connection_id: string | null
+          created_at: string
+          id: string
+          responses: Json
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          connection_id?: string | null
+          created_at?: string
+          id?: string
+          responses?: Json
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          connection_id?: string | null
+          created_at?: string
+          id?: string
+          responses?: Json
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_reflections_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "parent_child_connections"
             referencedColumns: ["id"]
           },
         ]
