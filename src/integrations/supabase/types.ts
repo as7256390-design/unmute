@@ -1285,6 +1285,14 @@ export type Database = {
     }
     Functions: {
       is_crisis_moderator: { Args: { _user_id: string }; Returns: boolean }
+      is_institution_admin: {
+        Args: { _institution_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_institution_member: {
+        Args: { _institution_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
