@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { MapPin, Hospital, Building2, Pill, Shield, Loader2, X, Navigation, Phone, AlertTriangle } from 'lucide-react';
+import { MapPin, Hospital, Building2, Pill, Shield, Loader2, Navigation, AlertTriangle, Map, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { EmergencyMap } from './EmergencyMap';
 
 interface Location {
   id: string;
@@ -40,15 +42,17 @@ export function NearbyEmergencyHelp() {
   const [loading, setLoading] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('map');
 
   const fetchNearbyLocations = async () => {
     setLoading(true);
     setError(null);
     setLocations([]);
+    setUserLocation(null);
     setIsOpen(true);
 
     try {
-      // Request geolocation
       if (!navigator.geolocation) {
         throw new Error('Geolocation is not supported by your browser');
       }
@@ -63,8 +67,8 @@ export function NearbyEmergencyHelp() {
 
       const { latitude, longitude } = position.coords;
       console.log('User location:', latitude, longitude);
+      setUserLocation({ lat: latitude, lon: longitude });
 
-      // Call edge function
       const { data, error: fnError } = await supabase.functions.invoke('nearby-emergency', {
         body: { latitude, longitude, radius: 5000 },
       });
@@ -143,7 +147,7 @@ export function NearbyEmergencyHelp() {
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] p-0">
+        <DialogContent className="max-w-3xl max-h-[90vh] p-0">
           <DialogHeader className="p-6 pb-0">
             <DialogTitle className="flex items-center gap-2 text-xl">
               <MapPin className="h-5 w-5 text-red-500" />
@@ -179,67 +183,104 @@ export function NearbyEmergencyHelp() {
             )}
 
             {!loading && !error && locations.length > 0 && (
-              <ScrollArea className="h-[60vh] pr-4">
-                <div className="space-y-6">
-                  {Object.entries(groupedLocations).map(([category, locs]) => (
-                    <div key={category}>
-                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                        {category === 'medical' ? '🏥 Medical Services' : '🚨 Emergency Services'}
-                        <span className="ml-2 text-xs font-normal">({locs.length})</span>
-                      </h3>
-                      <div className="space-y-3">
-                        {locs.map((location) => (
-                          <Card key={location.id} className="overflow-hidden">
-                            <CardContent className="p-4">
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="flex items-start gap-3 flex-1 min-w-0">
-                                  <div className={`p-2 rounded-lg ${categoryColors[location.category]}`}>
-                                    {categoryIcons[location.type] || <Building2 className="h-5 w-5" />}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="font-medium truncate">{location.name}</h4>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <Badge variant="secondary" className="text-xs">
-                                        {location.type}
-                                      </Badge>
-                                      <span className="text-xs text-muted-foreground">
-                                        {location.distance} km away
-                                      </span>
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="map" className="gap-2">
+                    <Map className="h-4 w-4" />
+                    Map View
+                  </TabsTrigger>
+                  <TabsTrigger value="list" className="gap-2">
+                    <List className="h-4 w-4" />
+                    List View
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="map" className="mt-0">
+                  <EmergencyMap locations={locations} userLocation={userLocation} />
+                  <div className="mt-3 flex flex-wrap gap-2 justify-center">
+                    <Badge variant="outline" className="gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                      Hospital
+                    </Badge>
+                    <Badge variant="outline" className="gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-orange-500"></span>
+                      Clinic/Doctor
+                    </Badge>
+                    <Badge variant="outline" className="gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                      Pharmacy
+                    </Badge>
+                    <Badge variant="outline" className="gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                      Police
+                    </Badge>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="list" className="mt-0">
+                  <ScrollArea className="h-[50vh] pr-4">
+                    <div className="space-y-6">
+                      {Object.entries(groupedLocations).map(([category, locs]) => (
+                        <div key={category}>
+                          <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                            {category === 'medical' ? '🏥 Medical Services' : '🚨 Emergency Services'}
+                            <span className="ml-2 text-xs font-normal">({locs.length})</span>
+                          </h3>
+                          <div className="space-y-3">
+                            {locs.map((location) => (
+                              <Card key={location.id} className="overflow-hidden">
+                                <CardContent className="p-4">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                                      <div className={`p-2 rounded-lg ${categoryColors[location.category]}`}>
+                                        {categoryIcons[location.type] || <Building2 className="h-5 w-5" />}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className="font-medium truncate">{location.name}</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <Badge variant="secondary" className="text-xs">
+                                            {location.type}
+                                          </Badge>
+                                          <span className="text-xs text-muted-foreground">
+                                            {location.distance} km away
+                                          </span>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground mt-1 truncate">
+                                          {location.address}
+                                        </p>
+                                      </div>
                                     </div>
-                                    <p className="text-sm text-muted-foreground mt-1 truncate">
-                                      {location.address}
-                                    </p>
+                                    <div className="flex flex-col gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1.5"
+                                        onClick={() => openInMaps(location)}
+                                      >
+                                        <MapPin className="h-3.5 w-3.5" />
+                                        View
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        className="gap-1.5"
+                                        onClick={() => getDirections(location)}
+                                      >
+                                        <Navigation className="h-3.5 w-3.5" />
+                                        Go
+                                      </Button>
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="gap-1.5"
-                                    onClick={() => openInMaps(location)}
-                                  >
-                                    <MapPin className="h-3.5 w-3.5" />
-                                    View
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="default"
-                                    className="gap-1.5"
-                                    onClick={() => getDirections(location)}
-                                  >
-                                    <Navigation className="h-3.5 w-3.5" />
-                                    Go
-                                  </Button>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </ScrollArea>
+                  </ScrollArea>
+                </TabsContent>
+              </Tabs>
             )}
           </div>
         </DialogContent>
