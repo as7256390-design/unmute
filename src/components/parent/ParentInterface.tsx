@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Users, BookOpen, MessageCircle, BarChart3, Heart, ArrowRight, Brain, Sparkles, GraduationCap, Lightbulb, HandHeart, CheckCircle2, Play } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, BookOpen, MessageCircle, BarChart3, Heart, ArrowRight, Brain, Sparkles, GraduationCap, Lightbulb, HandHeart, CheckCircle2, Play, Loader2, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -7,6 +7,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { ChildConnectionPanel } from './ChildConnectionPanel';
+import { AlignmentDashboard } from '@/components/dashboard/AlignmentDashboard';
 
 const parentModules = [
   {
@@ -14,7 +18,6 @@ const parentModules = [
     title: 'Understanding Your Child\'s World',
     description: 'Learn about the emotional challenges students face today — academic pressure, social media, and identity struggles.',
     icon: Brain,
-    progress: 0,
     lessons: 5,
     duration: '25 min',
     color: 'bg-primary/10 text-primary',
@@ -24,7 +27,6 @@ const parentModules = [
     title: 'Bridge the Communication Gap',
     description: 'Discover how to have meaningful conversations without triggering defensiveness.',
     icon: MessageCircle,
-    progress: 0,
     lessons: 4,
     duration: '20 min',
     color: 'bg-support/10 text-support',
@@ -34,7 +36,6 @@ const parentModules = [
     title: 'Academic Pressure & Expectations',
     description: 'Balance high hopes without breaking your child\'s spirit or mental health.',
     icon: GraduationCap,
-    progress: 0,
     lessons: 4,
     duration: '20 min',
     color: 'bg-hope/10 text-hope',
@@ -44,7 +45,6 @@ const parentModules = [
     title: 'Recognizing Warning Signs',
     description: 'Learn to spot early signs of emotional distress and how to respond with care.',
     icon: Heart,
-    progress: 0,
     lessons: 3,
     duration: '15 min',
     color: 'bg-destructive/10 text-destructive',
@@ -54,7 +54,6 @@ const parentModules = [
     title: 'Empathy in Action',
     description: 'Practical exercises to develop deeper emotional understanding.',
     icon: HandHeart,
-    progress: 0,
     lessons: 4,
     duration: '20 min',
     color: 'bg-safe/10 text-safe',
@@ -64,7 +63,6 @@ const parentModules = [
     title: 'Managing Your Own Triggers',
     description: 'Understand how your reactions affect your child and learn healthier responses.',
     icon: Lightbulb,
-    progress: 0,
     lessons: 3,
     duration: '15 min',
     color: 'bg-calm/10 text-calm',
@@ -72,10 +70,10 @@ const parentModules = [
 ];
 
 const parentRooms = [
-  { name: 'Learning to Listen', members: 15, active: true, description: 'Practice active listening with other parents' },
-  { name: 'Letting Go of Control', members: 12, active: true, description: 'Balance guidance with independence' },
-  { name: 'First-Gen Parent Support', members: 8, active: false, description: 'Unique challenges of first-generation parents' },
-  { name: 'Exam Season Stress', members: 22, active: true, description: 'Supporting your child during high-pressure times' },
+  { id: 'listening', name: 'Learning to Listen', members: 15, active: true, description: 'Practice active listening with other parents' },
+  { id: 'control', name: 'Letting Go of Control', members: 12, active: true, description: 'Balance guidance with independence' },
+  { id: 'firstgen', name: 'First-Gen Parent Support', members: 8, active: false, description: 'Unique challenges of first-generation parents' },
+  { id: 'exams', name: 'Exam Season Stress', members: 22, active: true, description: 'Supporting your child during high-pressure times' },
 ];
 
 const reflectionPrompts = [
@@ -99,32 +97,194 @@ const empathyQuiz = [
   },
 ];
 
-const badges = [
-  { icon: '🌱', name: 'First Step', description: 'Started your journey', earned: true },
-  { icon: '👂', name: 'Active Listener', description: 'Completed listening module', earned: false },
-  { icon: '💬', name: 'Open Communicator', description: 'Joined a parent circle', earned: false },
-  { icon: '🌟', name: 'Empathy Champion', description: 'Completed all modules', earned: false },
-  { icon: '📝', name: 'Reflective Parent', description: '5 journal entries', earned: false },
-  { icon: '🤝', name: 'Community Builder', description: 'Helped another parent', earned: false },
+const badgeDefinitions = [
+  { id: 'first_step', icon: '🌱', name: 'First Step', description: 'Started your journey' },
+  { id: 'active_listener', icon: '👂', name: 'Active Listener', description: 'Completed listening module' },
+  { id: 'open_communicator', icon: '💬', name: 'Open Communicator', description: 'Joined a parent circle' },
+  { id: 'empathy_champion', icon: '🌟', name: 'Empathy Champion', description: 'Completed all modules' },
+  { id: 'reflective_parent', icon: '📝', name: 'Reflective Parent', description: '5 journal entries' },
+  { id: 'community_builder', icon: '🤝', name: 'Community Builder', description: 'Helped another parent' },
 ];
 
 export function ParentInterface() {
-  const [activeTab, setActiveTab] = useState<'learn' | 'connect' | 'reflect' | 'tools'>('learn');
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'learn' | 'connect' | 'reflect' | 'tools' | 'child'>('child');
   const [journalEntry, setJournalEntry] = useState('');
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [moduleProgress, setModuleProgress] = useState<Record<string, number>>({});
+  const [earnedBadges, setEarnedBadges] = useState<string[]>([]);
+  const [journalEntries, setJournalEntries] = useState<any[]>([]);
+  const [savingJournal, setSavingJournal] = useState(false);
 
-  const handleJournalSubmit = () => {
-    if (journalEntry.trim()) {
-      toast.success('Journal entry saved', {
-        description: 'Your reflection has been recorded privately.',
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
+
+  const fetchData = async () => {
+    if (!user) return;
+
+    try {
+      // Fetch module progress
+      const { data: progressData } = await supabase
+        .from('parent_module_progress')
+        .select('module_id, progress')
+        .eq('user_id', user.id);
+
+      const progressMap: Record<string, number> = {};
+      (progressData || []).forEach(p => {
+        progressMap[p.module_id] = p.progress;
       });
-      setJournalEntry('');
-      setCurrentPromptIndex((prev) => (prev + 1) % reflectionPrompts.length);
+      setModuleProgress(progressMap);
+
+      // Fetch badges
+      const { data: badgesData } = await supabase
+        .from('parent_badges')
+        .select('badge_id')
+        .eq('user_id', user.id);
+
+      setEarnedBadges((badgesData || []).map(b => b.badge_id));
+
+      // Fetch journal entries count for badge check
+      const { data: journalData } = await supabase
+        .from('parent_journal_entries')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      setJournalEntries(journalData || []);
+
+      // Award first step badge if not earned
+      if (!earnedBadges.includes('first_step')) {
+        await awardBadge('first_step');
+      }
+    } catch (error) {
+      console.error('Error fetching parent data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const completedLessons = 3;
-  const totalLessons = parentModules.reduce((sum, m) => sum + m.lessons, 0);
+  const awardBadge = async (badgeId: string) => {
+    if (!user || earnedBadges.includes(badgeId)) return;
+
+    try {
+      await supabase
+        .from('parent_badges')
+        .insert({ user_id: user.id, badge_id: badgeId });
+
+      setEarnedBadges(prev => [...prev, badgeId]);
+      
+      const badge = badgeDefinitions.find(b => b.id === badgeId);
+      if (badge) {
+        toast.success(`Badge Earned: ${badge.name}!`, {
+          description: badge.description
+        });
+      }
+    } catch (error) {
+      console.error('Error awarding badge:', error);
+    }
+  };
+
+  const handleJournalSubmit = async () => {
+    if (!journalEntry.trim()) return;
+    if (!user) {
+      toast.error('Please sign in to save your journal entry');
+      return;
+    }
+
+    setSavingJournal(true);
+    try {
+      const { error } = await supabase
+        .from('parent_journal_entries')
+        .insert({
+          user_id: user.id,
+          content: journalEntry,
+          prompt: reflectionPrompts[currentPromptIndex]
+        });
+
+      if (error) throw error;
+
+      toast.success('Journal entry saved', {
+        description: 'Your reflection has been recorded privately.',
+      });
+
+      // Check for reflective parent badge (5 entries)
+      const newCount = journalEntries.length + 1;
+      if (newCount >= 5 && !earnedBadges.includes('reflective_parent')) {
+        await awardBadge('reflective_parent');
+      }
+
+      setJournalEntry('');
+      setCurrentPromptIndex((prev) => (prev + 1) % reflectionPrompts.length);
+      setJournalEntries(prev => [{ content: journalEntry, prompt: reflectionPrompts[currentPromptIndex], created_at: new Date() }, ...prev]);
+    } catch (error) {
+      console.error('Error saving journal:', error);
+      toast.error('Failed to save journal entry');
+    } finally {
+      setSavingJournal(false);
+    }
+  };
+
+  const startModule = async (moduleId: string) => {
+    if (!user) {
+      toast.error('Please sign in to track your progress');
+      return;
+    }
+
+    try {
+      await supabase
+        .from('parent_module_progress')
+        .upsert({
+          user_id: user.id,
+          module_id: moduleId,
+          progress: 10,
+          started_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,module_id'
+        });
+
+      setModuleProgress(prev => ({ ...prev, [moduleId]: 10 }));
+      toast.success('Module started!', {
+        description: 'Your progress is being tracked.'
+      });
+    } catch (error) {
+      console.error('Error starting module:', error);
+    }
+  };
+
+  const joinRoom = async (roomId: string, roomName: string) => {
+    if (!user) {
+      toast.error('Please sign in to join parent circles');
+      return;
+    }
+
+    // Award open communicator badge
+    if (!earnedBadges.includes('open_communicator')) {
+      await awardBadge('open_communicator');
+    }
+
+    toast.success(`Joined ${roomName}!`, {
+      description: 'You can now connect with other parents.'
+    });
+  };
+
+  const completedModules = Object.values(moduleProgress).filter(p => p === 100).length;
+  const totalProgress = Object.values(moduleProgress).reduce((sum, p) => sum + p, 0);
+  const overallProgress = parentModules.length > 0 ? Math.round(totalProgress / (parentModules.length * 100) * 100) : 0;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto p-6">
@@ -147,6 +307,7 @@ export function ParentInterface() {
       {/* Tabs */}
       <div className="flex flex-wrap justify-center gap-2 mb-8">
         {[
+          { id: 'child', label: 'Your Child', icon: Heart },
           { id: 'learn', label: 'Learning Modules', icon: BookOpen },
           { id: 'connect', label: 'Parent Circles', icon: Users },
           { id: 'reflect', label: 'Self-Reflection', icon: Brain },
@@ -164,6 +325,16 @@ export function ParentInterface() {
         ))}
       </div>
 
+      {/* Child Connection Tab */}
+      {activeTab === 'child' && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <ChildConnectionPanel />
+        </motion.div>
+      )}
+
       {/* Learning Modules */}
       {activeTab === 'learn' && (
         <motion.div 
@@ -177,40 +348,57 @@ export function ParentInterface() {
               <Sparkles className="h-5 w-5 text-primary" />
               <span className="font-display font-semibold">Your Learning Journey</span>
             </div>
-            <Progress value={(completedLessons / totalLessons) * 100} className="h-2 mb-2" />
+            <Progress value={overallProgress} className="h-2 mb-2" />
             <p className="text-sm text-muted-foreground">
-              You've completed {completedLessons} of {totalLessons} lessons. Every step counts!
+              You've completed {completedModules} of {parentModules.length} modules. Every step counts!
             </p>
           </div>
 
           {/* Module grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {parentModules.map((module, index) => (
-              <motion.div 
-                key={module.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="glass rounded-2xl p-5 hover:shadow-medium transition-all cursor-pointer group"
-              >
-                <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-4", module.color)}>
-                  <module.icon className="h-6 w-6" />
-                </div>
-                <h3 className="font-display font-semibold text-base mb-2 group-hover:text-primary transition-colors">
-                  {module.title}
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{module.description}</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-2">
-                    <Badge variant="secondary" className="text-xs">{module.lessons} lessons</Badge>
-                    <Badge variant="outline" className="text-xs">{module.duration}</Badge>
+            {parentModules.map((module, index) => {
+              const progress = moduleProgress[module.id] || 0;
+              
+              return (
+                <motion.div 
+                  key={module.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="glass rounded-2xl p-5 hover:shadow-medium transition-all cursor-pointer group"
+                >
+                  <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-4", module.color)}>
+                    <module.icon className="h-6 w-6" />
                   </div>
-                  <Button variant="ghost" size="sm" className="gap-1">
-                    <Play className="h-3 w-3" />
-                  </Button>
-                </div>
-              </motion.div>
-            ))}
+                  <h3 className="font-display font-semibold text-base mb-2 group-hover:text-primary transition-colors">
+                    {module.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{module.description}</p>
+                  
+                  {progress > 0 && (
+                    <div className="mb-3">
+                      <Progress value={progress} className="h-1.5" />
+                      <p className="text-xs text-muted-foreground mt-1">{progress}% complete</p>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-2">
+                      <Badge variant="secondary" className="text-xs">{module.lessons} lessons</Badge>
+                      <Badge variant="outline" className="text-xs">{module.duration}</Badge>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="gap-1"
+                      onClick={() => startModule(module.id)}
+                    >
+                      <Play className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </motion.div>
       )}
@@ -233,7 +421,7 @@ export function ParentInterface() {
           <div className="space-y-3">
             {parentRooms.map((room, index) => (
               <motion.div 
-                key={room.name}
+                key={room.id}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
@@ -253,7 +441,13 @@ export function ParentInterface() {
                     <p className="text-sm text-muted-foreground mb-2">{room.description}</p>
                     <p className="text-xs text-muted-foreground">{room.members} parents</p>
                   </div>
-                  <Button variant="gradient" size="sm">Join</Button>
+                  <Button 
+                    variant="gradient" 
+                    size="sm"
+                    onClick={() => joinRoom(room.id, room.name)}
+                  >
+                    Join
+                  </Button>
                 </div>
               </motion.div>
             ))}
@@ -305,11 +499,33 @@ export function ParentInterface() {
               >
                 Try a different prompt →
               </button>
-              <Button onClick={handleJournalSubmit} disabled={!journalEntry.trim()}>
+              <Button 
+                onClick={handleJournalSubmit} 
+                disabled={!journalEntry.trim() || savingJournal}
+              >
+                {savingJournal ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Save Entry
               </Button>
             </div>
           </div>
+
+          {/* Recent entries */}
+          {journalEntries.length > 0 && (
+            <div className="glass rounded-2xl p-6">
+              <h3 className="font-display font-semibold mb-4">Your Recent Reflections</h3>
+              <div className="space-y-3">
+                {journalEntries.slice(0, 3).map((entry, index) => (
+                  <div key={index} className="bg-muted/50 rounded-xl p-4">
+                    <p className="text-xs text-muted-foreground mb-2 italic">"{entry.prompt}"</p>
+                    <p className="text-sm line-clamp-2">{entry.content}</p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {new Date(entry.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Parent Self-Assessment */}
           <div className="glass rounded-2xl p-6">
@@ -355,32 +571,8 @@ export function ParentInterface() {
           animate={{ opacity: 1 }}
           className="space-y-6"
         >
-          {/* Tools grid */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="glass rounded-2xl p-6">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-                <BarChart3 className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-display font-semibold text-lg mb-2">Alignment Dashboard</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Compare emotional perspectives with your child to identify connection gaps 
-                and celebrate improvements.
-              </p>
-              <Badge variant="secondary">Coming Soon</Badge>
-            </div>
-
-            <div className="glass rounded-2xl p-6">
-              <div className="w-12 h-12 rounded-xl bg-support/10 flex items-center justify-center mb-4">
-                <MessageCircle className="h-6 w-6 text-support" />
-              </div>
-              <h3 className="font-display font-semibold text-lg mb-2">AI Parent Guide</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Get answers to tough parenting questions from our compassionate AI. 
-                No judgment, just guidance.
-              </p>
-              <Button variant="gradient" size="sm">Ask a Question</Button>
-            </div>
-          </div>
+          {/* Alignment Dashboard */}
+          <AlignmentDashboard />
 
           {/* Badges */}
           <div className="glass rounded-2xl p-6">
@@ -392,20 +584,23 @@ export function ParentInterface() {
               Recognition for your commitment to becoming a more understanding parent.
             </p>
             <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-              {badges.map((badge) => (
-                <div 
-                  key={badge.name}
-                  className={cn(
-                    "flex flex-col items-center p-3 rounded-xl text-center",
-                    badge.earned ? "bg-primary/10" : "opacity-40 grayscale"
-                  )}
-                  title={badge.description}
-                >
-                  <span className="text-2xl mb-1">{badge.icon}</span>
-                  <span className="text-xs font-medium">{badge.name}</span>
-                  {badge.earned && <CheckCircle2 className="h-3 w-3 text-safe mt-1" />}
-                </div>
-              ))}
+              {badgeDefinitions.map((badge) => {
+                const earned = earnedBadges.includes(badge.id);
+                return (
+                  <div 
+                    key={badge.id}
+                    className={cn(
+                      "flex flex-col items-center p-3 rounded-xl text-center",
+                      earned ? "bg-primary/10" : "opacity-40 grayscale"
+                    )}
+                    title={badge.description}
+                  >
+                    <span className="text-2xl mb-1">{badge.icon}</span>
+                    <span className="text-xs font-medium">{badge.name}</span>
+                    {earned && <CheckCircle2 className="h-3 w-3 text-safe mt-1" />}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

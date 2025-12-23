@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import { Users, TrendingUp, AlertTriangle, Heart, MessageCircle, CheckCircle2, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, TrendingUp, AlertTriangle, Heart, MessageCircle, CheckCircle2, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const alignmentAreas = [
   { 
@@ -73,8 +75,79 @@ const weeklyProgress = [
 ];
 
 export function AlignmentDashboard() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'reflect'>('overview');
   const [reflectionAnswers, setReflectionAnswers] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+  const [alignmentData, setAlignmentData] = useState(alignmentAreas);
+  const [progressData, setProgressData] = useState(weeklyProgress);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      fetchAlignmentData();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
+
+  const fetchAlignmentData = async () => {
+    if (!user) return;
+
+    try {
+      // Fetch user's alignment responses
+      const { data: responses } = await supabase
+        .from('alignment_responses')
+        .select('*')
+        .eq('user_id', user.id);
+
+      // Fetch weekly reflections
+      const { data: reflections } = await supabase
+        .from('weekly_reflections')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('week_start', { ascending: false })
+        .limit(4);
+
+      // Update alignment data with real responses if available
+      if (responses && responses.length > 0) {
+        const updatedAreas = alignmentAreas.map(area => {
+          const response = responses.find(r => r.area_id === area.id);
+          if (response) {
+            return {
+              ...area,
+              studentScore: response.user_type === 'student' ? response.score : area.studentScore,
+              parentScore: response.user_type === 'parent' ? response.score : area.parentScore
+            };
+          }
+          return area;
+        });
+        setAlignmentData(updatedAreas);
+      }
+
+      // Update progress data if reflections exist
+      if (reflections && reflections.length > 0) {
+        const newProgress = reflections.map((r, i) => ({
+          week: i === 0 ? 'This Week' : `Week ${4 - i}`,
+          score: calculateReflectionScore(r.responses as Record<string, number>)
+        })).reverse();
+        if (newProgress.length > 0) {
+          setProgressData(newProgress);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching alignment data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateReflectionScore = (responses: Record<string, number>): number => {
+    const values = Object.values(responses);
+    if (values.length === 0) return 50;
+    const avg = values.reduce((a, b) => a + b, 0) / values.length;
+    return Math.round(avg * 20);
+  };
 
   const calculateGap = (student: number, parent: number) => Math.abs(student - parent);
   
@@ -85,17 +158,53 @@ export function AlignmentDashboard() {
   };
 
   const overallAlignment = Math.round(
-    alignmentAreas.reduce((acc, area) => acc + (5 - calculateGap(area.studentScore, area.parentScore)), 0) / 
-    alignmentAreas.length * 20
+    alignmentData.reduce((acc, area) => acc + (5 - calculateGap(area.studentScore, area.parentScore)), 0) / 
+    alignmentData.length * 20
   );
 
   const handleReflectionChange = (id: string, value: number) => {
     setReflectionAnswers(prev => ({ ...prev, [id]: value }));
   };
 
-  const handleSaveReflection = () => {
-    toast.success('Reflection saved! This helps improve your alignment score over time.');
+  const handleSaveReflection = async () => {
+    if (!user) {
+      toast.error('Please sign in to save your reflection');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      const weekStartStr = weekStart.toISOString().split('T')[0];
+
+      await supabase
+        .from('weekly_reflections')
+        .upsert({
+          user_id: user.id,
+          week_start: weekStartStr,
+          responses: reflectionAnswers
+        }, {
+          onConflict: 'user_id,week_start,connection_id'
+        });
+
+      toast.success('Reflection saved! This helps improve your alignment score over time.');
+      fetchAlignmentData();
+    } catch (error) {
+      console.error('Error saving reflection:', error);
+      toast.error('Failed to save reflection');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -159,7 +268,7 @@ export function AlignmentDashboard() {
             </h2>
             
             <div className="flex items-end justify-between gap-2 h-32">
-              {weeklyProgress.map((week, index) => (
+              {progressData.map((week, index) => (
                 <div key={week.week} className="flex-1 flex flex-col items-center gap-2">
                   <span className="text-xs font-medium">{week.score}%</span>
                   <div 
@@ -181,7 +290,7 @@ export function AlignmentDashboard() {
             <h2 className="font-display font-semibold text-lg mb-4">Area Breakdown</h2>
             
             <div className="space-y-4">
-              {alignmentAreas.map(area => {
+              {alignmentData.map(area => {
                 const gap = calculateGap(area.studentScore, area.parentScore);
                 const severity = getGapSeverity(gap);
                 
@@ -270,7 +379,9 @@ export function AlignmentDashboard() {
             variant="gradient" 
             className="w-full mt-6"
             onClick={handleSaveReflection}
+            disabled={saving || Object.keys(reflectionAnswers).length === 0}
           >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             Save This Week's Reflection
           </Button>
 
