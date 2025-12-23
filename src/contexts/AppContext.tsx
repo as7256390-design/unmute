@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { Chat, Message, EmotionalState, UserProfile } from '@/types';
 
 type ViewType = 'chat' | 'emotional-form' | 'phq9' | 'assessments' | 'support-rooms' | 'wall' | 'journal' | 'dashboard' | 'parent' | 'onboarding' | 'mood-tracker' | 'wellness' | 'alignment' | 'programs' | 'gamification' | 'counselor' | 'training' | 'relaxation' | 'institution';
@@ -30,14 +30,41 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+// Get initial userType from localStorage
+const getInitialUserType = (): 'student' | 'parent' | null => {
+  try {
+    const stored = localStorage.getItem('unmute_user_type');
+    if (stored === 'student' || stored === 'parent') {
+      return stored;
+    }
+  } catch {
+    // localStorage not available
+  }
+  return null;
+};
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChat, setCurrentChat] = useState<Chat | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [currentEmotionalState, setCurrentEmotionalState] = useState<EmotionalState | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [userType, setUserType] = useState<'student' | 'parent' | null>(null);
-  const [currentView, setCurrentView] = useState<ViewType>('onboarding');
+  const [userType, setUserTypeState] = useState<'student' | 'parent' | null>(getInitialUserType);
+  const [currentView, setCurrentView] = useState<ViewType>(getInitialUserType() ? 'chat' : 'onboarding');
+
+  // Persist userType to localStorage
+  const setUserType = useCallback((type: 'student' | 'parent' | null) => {
+    setUserTypeState(type);
+    try {
+      if (type) {
+        localStorage.setItem('unmute_user_type', type);
+      } else {
+        localStorage.removeItem('unmute_user_type');
+      }
+    } catch {
+      // localStorage not available
+    }
+  }, []);
 
   const createNewChat = useCallback(() => {
     const newChat: Chat = {
