@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_templates: {
+        Row: {
+          activity_type: string
+          category: string
+          created_at: string
+          description: string
+          difficulty: string | null
+          id: string
+          prompt: string
+          title: string
+        }
+        Insert: {
+          activity_type?: string
+          category?: string
+          created_at?: string
+          description: string
+          difficulty?: string | null
+          id?: string
+          prompt: string
+          title: string
+        }
+        Update: {
+          activity_type?: string
+          category?: string
+          created_at?: string
+          description?: string
+          difficulty?: string | null
+          id?: string
+          prompt?: string
+          title?: string
+        }
+        Relationships: []
+      }
       alignment_responses: {
         Row: {
           area_id: string
@@ -1159,6 +1192,59 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      shared_activities: {
+        Row: {
+          activity_type: string
+          child_completed_at: string | null
+          child_response: string | null
+          connection_id: string
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          parent_completed_at: string | null
+          parent_response: string | null
+          prompt: string
+          title: string
+        }
+        Insert: {
+          activity_type?: string
+          child_completed_at?: string | null
+          child_response?: string | null
+          connection_id: string
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          parent_completed_at?: string | null
+          parent_response?: string | null
+          prompt: string
+          title: string
+        }
+        Update: {
+          activity_type?: string
+          child_completed_at?: string | null
+          child_response?: string | null
+          connection_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          parent_completed_at?: string | null
+          parent_response?: string | null
+          prompt?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_activities_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "parent_child_connections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       support_rooms: {
         Row: {

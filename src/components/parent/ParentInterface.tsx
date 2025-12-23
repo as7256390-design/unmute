@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, BookOpen, MessageCircle, BarChart3, Heart, ArrowRight, Brain, Sparkles, GraduationCap, Lightbulb, HandHeart, CheckCircle2, Play, Loader2, Link2 } from 'lucide-react';
+import { Users, BookOpen, MessageCircle, BarChart3, Heart, ArrowRight, Brain, Sparkles, GraduationCap, Lightbulb, HandHeart, CheckCircle2, Play, Loader2, Link2, HeartHandshake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { ChildConnectionPanel } from './ChildConnectionPanel';
+import { SharedActivities } from './SharedActivities';
 import { AlignmentDashboard } from '@/components/dashboard/AlignmentDashboard';
 
 const parentModules = [
@@ -108,7 +109,7 @@ const badgeDefinitions = [
 
 export function ParentInterface() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'learn' | 'connect' | 'reflect' | 'tools' | 'child'>('child');
+  const [activeTab, setActiveTab] = useState<'learn' | 'connect' | 'reflect' | 'tools' | 'child' | 'activities'>('child');
   const [journalEntry, setJournalEntry] = useState('');
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -308,6 +309,7 @@ export function ParentInterface() {
       <div className="flex flex-wrap justify-center gap-2 mb-8">
         {[
           { id: 'child', label: 'Your Child', icon: Heart },
+          { id: 'activities', label: 'Shared Activities', icon: HeartHandshake },
           { id: 'learn', label: 'Learning Modules', icon: BookOpen },
           { id: 'connect', label: 'Parent Circles', icon: Users },
           { id: 'reflect', label: 'Self-Reflection', icon: Brain },
@@ -332,6 +334,16 @@ export function ParentInterface() {
           animate={{ opacity: 1 }}
         >
           <ChildConnectionPanel />
+        </motion.div>
+      )}
+
+      {/* Shared Activities Tab */}
+      {activeTab === 'activities' && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <SharedActivities />
         </motion.div>
       )}
 
