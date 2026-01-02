@@ -19,12 +19,19 @@ import {
   Heart,
   Trash2,
   UserMinus,
-  Calendar
+  Calendar,
+  UserX,
+  Stethoscope,
+  Phone,
+  ArrowRight,
+  Brain,
+  Activity,
+  Clock
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +45,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
 
 interface Institution {
   id: string;
@@ -63,6 +71,63 @@ interface Member {
   joined_at: string;
 }
 
+interface RiskProfile {
+  id: string;
+  user_id: string;
+  risk_level: string;
+  suicide_roadmap_stage: string | null;
+  last_mood_score: number | null;
+  crisis_count: number | null;
+  needs_counselling: boolean | null;
+  last_crisis_detected_at: string | null;
+  assigned_counsellor_id: string | null;
+  assigned_listener_id: string | null;
+  updated_at: string;
+}
+
+interface CounsellorAssignment {
+  id: string;
+  student_user_id: string;
+  counsellor_user_id: string;
+  status: string;
+  priority: string;
+  reason: string | null;
+  risk_level: string | null;
+  assigned_at: string;
+}
+
+const RISK_COLORS = {
+  low: 'hsl(var(--safe))',
+  medium: 'hsl(var(--warning))',
+  high: 'hsl(142 76% 36%)', // Orange for high
+  critical: 'hsl(var(--destructive))'
+};
+
+const STAGE_LABELS: Record<string, { label: string; severity: number; color: string }> = {
+  trigger: { label: 'Trigger', severity: 1, color: 'bg-yellow-500' },
+  spiral: { label: 'Negative Spiral', severity: 2, color: 'bg-yellow-600' },
+  distortions: { label: 'Cognitive Distortions', severity: 3, color: 'bg-orange-500' },
+  overload: { label: 'Emotional Overload', severity: 4, color: 'bg-orange-600' },
+  isolation: { label: 'Isolation', severity: 5, color: 'bg-red-400' },
+  ideation: { label: 'Ideation', severity: 6, color: 'bg-red-500' },
+  planning: { label: 'Planning', severity: 7, color: 'bg-red-600' },
+  action: { label: 'Action Risk', severity: 8, color: 'bg-red-700' }
+};
+
+const getInterventionRecommendation = (stage: string): string => {
+  const recommendations: Record<string, string> = {
+    trigger: 'Offer immediate emotional validation. Connect with peer listener for stress relief. Suggest wellness tools and guided breathing exercises.',
+    spiral: 'Engage in cognitive reframing conversations. Assign trained peer listener. Monitor mood patterns closely for escalation.',
+    distortions: 'Schedule counsellor session within 48 hours. Introduce CBT-based thought challenging exercises. Consider parent notification if minor.',
+    overload: 'Priority counsellor assignment required. Daily check-ins recommended. Activate support network and notify emergency contacts if appropriate.',
+    isolation: 'Urgent intervention needed. Reach out proactively. Consider in-person wellness check. Assign both listener and counsellor.',
+    ideation: 'CRITICAL: Immediate professional intervention. Contact crisis team. Ensure 24/7 monitoring. Notify parents/guardians immediately.',
+    planning: 'EMERGENCY: Activate crisis protocol. Contact emergency services if needed. Do not leave student alone. Professional oversight required.',
+    action: 'EMERGENCY: Immediate crisis response required. Contact emergency services. Ensure physical safety. Full crisis team activation.'
+  };
+  return recommendations[stage] || 'Continue monitoring and provide standard support resources.';
+};
+
 const COLORS = ['hsl(var(--safe))', 'hsl(var(--warning))', 'hsl(var(--destructive))'];
 
 export function InstitutionDashboard() {
@@ -71,6 +136,8 @@ export function InstitutionDashboard() {
   const [moodStats, setMoodStats] = useState<MoodStat[]>([]);
   const [memberCount, setMemberCount] = useState(0);
   const [members, setMembers] = useState<Member[]>([]);
+  const [riskProfiles, setRiskProfiles] = useState<RiskProfile[]>([]);
+  const [assignments, setAssignments] = useState<CounsellorAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [newInstitution, setNewInstitution] = useState({ name: '', type: 'school' });
@@ -105,6 +172,8 @@ export function InstitutionDashboard() {
         setInstitution(inst);
         loadStats(inst.id);
         loadMembers(inst.id);
+        loadRiskProfiles(inst.id);
+        loadAssignments(inst.id);
       } else {
         setShowCreate(true);
       }
@@ -138,6 +207,30 @@ export function InstitutionDashboard() {
     if (data) {
       setMembers(data);
       setMemberCount(count || data.length);
+    }
+  };
+
+  const loadRiskProfiles = async (institutionId: string) => {
+    const { data } = await supabase
+      .from('student_risk_profiles')
+      .select('*')
+      .eq('institution_id', institutionId)
+      .order('updated_at', { ascending: false });
+
+    if (data) {
+      setRiskProfiles(data);
+    }
+  };
+
+  const loadAssignments = async (institutionId: string) => {
+    const { data } = await supabase
+      .from('counsellor_assignments')
+      .select('*')
+      .eq('institution_id', institutionId)
+      .order('assigned_at', { ascending: false });
+
+    if (data) {
+      setAssignments(data);
     }
   };
 
@@ -442,8 +535,13 @@ export function InstitutionDashboard() {
       </div>
 
       {/* Charts & Members */}
-      <Tabs defaultValue="trends" className="w-full">
-        <TabsList>
+      <Tabs defaultValue="at-risk" className="w-full">
+        <TabsList className="flex-wrap h-auto gap-1">
+          <TabsTrigger value="at-risk" className="gap-1">
+            <AlertTriangle className="h-4 w-4" />
+            At-Risk ({riskProfiles.filter(r => r.needs_counselling || r.risk_level === 'high' || r.risk_level === 'critical').length})
+          </TabsTrigger>
+          <TabsTrigger value="roadmap">Suicide Roadmap</TabsTrigger>
           <TabsTrigger value="trends">Mood Trends</TabsTrigger>
           <TabsTrigger value="stress">Stress Distribution</TabsTrigger>
           <TabsTrigger value="engagement">Engagement</TabsTrigger>
@@ -452,6 +550,293 @@ export function InstitutionDashboard() {
             Members ({memberCount})
           </TabsTrigger>
         </TabsList>
+
+        {/* At-Risk Students Tab */}
+        <TabsContent value="at-risk">
+          <div className="space-y-6">
+            {/* Risk Level Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {(['low', 'medium', 'high', 'critical'] as const).map(level => {
+                const count = riskProfiles.filter(r => r.risk_level === level).length;
+                const needsCounselling = riskProfiles.filter(r => r.risk_level === level && r.needs_counselling).length;
+                return (
+                  <Card key={level} className={`glass ${level === 'critical' && count > 0 ? 'border-destructive animate-pulse' : ''}`}>
+                    <CardContent className="pt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <Badge 
+                          variant={level === 'critical' ? 'destructive' : level === 'high' ? 'destructive' : level === 'medium' ? 'outline' : 'secondary'}
+                          className="capitalize"
+                        >
+                          {level}
+                        </Badge>
+                        <span className="text-2xl font-bold">{count}</span>
+                      </div>
+                      {needsCounselling > 0 && (
+                        <p className="text-xs text-destructive flex items-center gap-1">
+                          <Stethoscope className="h-3 w-3" />
+                          {needsCounselling} need counselling
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Students Needing Counselling */}
+            <Card className="glass border-warning/50">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Stethoscope className="h-5 w-5 text-warning" />
+                    <CardTitle>Students Needing Counselling</CardTitle>
+                  </div>
+                  <Badge variant="outline" className="text-warning border-warning">
+                    {riskProfiles.filter(r => r.needs_counselling).length} students
+                  </Badge>
+                </div>
+                <CardDescription>
+                  Students flagged by the system for professional intervention (anonymized IDs)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {riskProfiles.filter(r => r.needs_counselling).length > 0 ? (
+                  <ScrollArea className="h-[300px]">
+                    <div className="space-y-3">
+                      {riskProfiles
+                        .filter(r => r.needs_counselling)
+                        .sort((a, b) => {
+                          const stageOrder = ['action', 'planning', 'ideation', 'isolation', 'overload', 'distortions', 'spiral', 'trigger'];
+                          return stageOrder.indexOf(a.suicide_roadmap_stage || '') - stageOrder.indexOf(b.suicide_roadmap_stage || '');
+                        })
+                        .map((profile, idx) => (
+                          <div key={profile.id} className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="font-mono text-sm text-muted-foreground">
+                                    Student #{idx + 1}
+                                  </span>
+                                  <Badge 
+                                    variant={profile.risk_level === 'critical' ? 'destructive' : profile.risk_level === 'high' ? 'destructive' : 'outline'}
+                                    className="capitalize"
+                                  >
+                                    {profile.risk_level} risk
+                                  </Badge>
+                                  {profile.suicide_roadmap_stage && STAGE_LABELS[profile.suicide_roadmap_stage] && (
+                                    <Badge className={`${STAGE_LABELS[profile.suicide_roadmap_stage].color} text-white`}>
+                                      {STAGE_LABELS[profile.suicide_roadmap_stage].label}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                  <div>
+                                    <p className="text-muted-foreground">Last Mood</p>
+                                    <p className="font-medium">{profile.last_mood_score?.toFixed(1) || 'N/A'}/5</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground">Crisis Count</p>
+                                    <p className="font-medium">{profile.crisis_count || 0}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground">Last Crisis</p>
+                                    <p className="font-medium">
+                                      {profile.last_crisis_detected_at 
+                                        ? new Date(profile.last_crisis_detected_at).toLocaleDateString()
+                                        : 'Never'}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground">Assigned</p>
+                                    <p className="font-medium">
+                                      {profile.assigned_counsellor_id ? 'Counsellor' : profile.assigned_listener_id ? 'Listener' : 'Unassigned'}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex flex-col gap-2">
+                                {!profile.assigned_counsellor_id && (
+                                  <Button size="sm" variant="outline" className="text-xs">
+                                    <UserX className="h-3 w-3 mr-1" />
+                                    Assign
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Intervention Recommendation */}
+                            {profile.suicide_roadmap_stage && (
+                              <div className="mt-3 p-3 rounded-md bg-muted/50 text-sm">
+                                <p className="font-medium text-primary mb-1">💡 Recommended Intervention:</p>
+                                <p className="text-muted-foreground">
+                                  {getInterventionRecommendation(profile.suicide_roadmap_stage)}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  </ScrollArea>
+                ) : (
+                  <div className="h-[200px] flex flex-col items-center justify-center text-muted-foreground gap-3">
+                    <Heart className="h-12 w-12 opacity-20" />
+                    <p>No students currently flagged for counselling</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Active Assignments */}
+            <Card className="glass">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-primary" />
+                  Active Counsellor Assignments
+                </CardTitle>
+                <CardDescription>Track ongoing interventions and their status</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {assignments.filter(a => a.status !== 'completed').length > 0 ? (
+                  <ScrollArea className="h-[250px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Priority</TableHead>
+                          <TableHead>Risk Level</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Assigned</TableHead>
+                          <TableHead>Reason</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {assignments
+                          .filter(a => a.status !== 'completed')
+                          .map(assignment => (
+                            <TableRow key={assignment.id}>
+                              <TableCell>
+                                <Badge variant={assignment.priority === 'urgent' ? 'destructive' : 'outline'} className="capitalize">
+                                  {assignment.priority}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary" className="capitalize">
+                                  {assignment.risk_level || 'Unknown'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={assignment.status === 'active' ? 'default' : 'outline'} className="capitalize">
+                                  {assignment.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {new Date(assignment.assigned_at).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                                {assignment.reason || 'System detected'}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                ) : (
+                  <div className="h-[150px] flex flex-col items-center justify-center text-muted-foreground gap-3">
+                    <Clock className="h-12 w-12 opacity-20" />
+                    <p>No active assignments</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Suicide Roadmap Analytics Tab */}
+        <TabsContent value="roadmap">
+          <Card className="glass">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5 text-primary" />
+                Suicide Roadmap Stage Distribution
+              </CardTitle>
+              <CardDescription>
+                Anonymized analysis of students across the 8-stage emotional crisis progression model
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Stage Distribution */}
+                <div className="space-y-4">
+                  {Object.entries(STAGE_LABELS).map(([stage, info]) => {
+                    const count = riskProfiles.filter(r => r.suicide_roadmap_stage === stage).length;
+                    const percentage = riskProfiles.length > 0 ? (count / riskProfiles.length) * 100 : 0;
+                    return (
+                      <div key={stage} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-3 h-3 rounded-full ${info.color}`} />
+                            <span>{info.label}</span>
+                          </div>
+                          <span className="font-medium">{count} students</span>
+                        </div>
+                        <Progress value={percentage} className="h-2" />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Intervention Guide */}
+                <div className="p-4 rounded-lg border bg-muted/30">
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-primary" />
+                    Intervention Priority Guide
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="p-2 rounded bg-red-500/10 border-l-4 border-red-500">
+                      <p className="font-medium text-red-500">Stages 6-8 (Ideation → Action)</p>
+                      <p className="text-muted-foreground">Immediate professional intervention required. Activate emergency protocols.</p>
+                    </div>
+                    <div className="p-2 rounded bg-orange-500/10 border-l-4 border-orange-500">
+                      <p className="font-medium text-orange-500">Stages 4-5 (Overload → Isolation)</p>
+                      <p className="text-muted-foreground">Counsellor assignment recommended. Monitor closely.</p>
+                    </div>
+                    <div className="p-2 rounded bg-yellow-500/10 border-l-4 border-yellow-500">
+                      <p className="font-medium text-yellow-500">Stages 1-3 (Trigger → Distortions)</p>
+                      <p className="text-muted-foreground">Peer listener support. Wellness tools and programs.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t">
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-safe">
+                    {riskProfiles.filter(r => ['trigger', 'spiral', 'distortions'].includes(r.suicide_roadmap_stage || '')).length}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Early Stage (1-3)</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-warning">
+                    {riskProfiles.filter(r => ['overload', 'isolation'].includes(r.suicide_roadmap_stage || '')).length}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Mid Stage (4-5)</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-destructive">
+                    {riskProfiles.filter(r => ['ideation', 'planning', 'action'].includes(r.suicide_roadmap_stage || '')).length}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Critical Stage (6-8)</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-muted-foreground">
+                    {riskProfiles.filter(r => !r.suicide_roadmap_stage).length}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Not Detected</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="trends">
           <Card className="glass">
