@@ -26,8 +26,12 @@ import {
   ArrowRight,
   Brain,
   Activity,
-  Clock
+  Clock,
+  BellRing,
+  UserCheck
 } from 'lucide-react';
+import { RoleVerificationPanel } from './RoleVerificationPanel';
+import { CrisisAlertsPanel } from './CrisisAlertsPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -537,11 +541,19 @@ export function InstitutionDashboard() {
       {/* Charts & Members */}
       <Tabs defaultValue="at-risk" className="w-full">
         <TabsList className="flex-wrap h-auto gap-1">
+          <TabsTrigger value="crisis-alerts" className="gap-1">
+            <BellRing className="h-4 w-4" />
+            Crisis Alerts
+          </TabsTrigger>
           <TabsTrigger value="at-risk" className="gap-1">
             <AlertTriangle className="h-4 w-4" />
             At-Risk ({riskProfiles.filter(r => r.needs_counselling || r.risk_level === 'high' || r.risk_level === 'critical').length})
           </TabsTrigger>
           <TabsTrigger value="roadmap">Suicide Roadmap</TabsTrigger>
+          <TabsTrigger value="verification" className="gap-1">
+            <UserCheck className="h-4 w-4" />
+            Staff Verification
+          </TabsTrigger>
           <TabsTrigger value="trends">Mood Trends</TabsTrigger>
           <TabsTrigger value="stress">Stress Distribution</TabsTrigger>
           <TabsTrigger value="engagement">Engagement</TabsTrigger>
@@ -550,6 +562,21 @@ export function InstitutionDashboard() {
             Members ({memberCount})
           </TabsTrigger>
         </TabsList>
+
+        {/* Crisis Alerts Tab */}
+        <TabsContent value="crisis-alerts">
+          {institution && <CrisisAlertsPanel institutionId={institution.id} />}
+        </TabsContent>
+
+        {/* Staff Verification Tab */}
+        <TabsContent value="verification">
+          {institution && (
+            <RoleVerificationPanel 
+              institutionId={institution.id} 
+              onVerificationChange={() => loadMembers(institution.id)}
+            />
+          )}
+        </TabsContent>
 
         {/* At-Risk Students Tab */}
         <TabsContent value="at-risk">
