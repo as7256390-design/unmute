@@ -29,7 +29,9 @@ import {
   Gamepad2,
   HeartHandshake,
   Menu,
-  X
+  X,
+  Headphones,
+  Stethoscope
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/contexts/AppContext';
@@ -67,6 +69,8 @@ const professionalNavItems = [
   { id: 'counselor', label: 'Book Counselor', icon: Calendar, description: 'Schedule session' },
   { id: 'training', label: 'Peer Training', icon: GraduationCap, description: 'Become a listener' },
   { id: 'institution', label: 'Institution', icon: Building2, description: 'Admin dashboard' },
+  { id: 'listener-portal', label: 'Listener Portal', icon: Headphones, description: 'Peer support dashboard' },
+  { id: 'counsellor-portal', label: 'Counsellor Portal', icon: Stethoscope, description: 'Professional dashboard' },
 ];
 
 export function AppSidebar() {
