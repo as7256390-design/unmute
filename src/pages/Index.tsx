@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApp } from '@/contexts/AppContext';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useApp } from '@/contexts/AppContext';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { ChatInterface } from '@/components/chat/ChatInterface';
@@ -23,9 +24,9 @@ import { RelaxationContent } from '@/components/relaxation/RelaxationContent';
 import { InstitutionDashboard } from '@/components/institution/InstitutionDashboard';
 import { BrainGamesHub } from '@/components/games/BrainGamesHub';
 import { ChildSharedActivities } from '@/components/child/ChildSharedActivities';
+import { ListenerCounsellorPortal } from '@/components/portal/ListenerCounsellorPortal';
 import { SOSButton } from '@/components/crisis/SOSButton';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
-import { Loader2 } from 'lucide-react';
 
 const Index = () => {
   const { currentView, userType } = useApp();
@@ -96,6 +97,9 @@ const Index = () => {
         return <InstitutionDashboard />;
       case 'family-activities':
         return <ChildSharedActivities />;
+      case 'listener-portal':
+      case 'counsellor-portal':
+        return <ListenerCounsellorPortal />;
       default:
         return <ChatInterface />;
     }
