@@ -518,6 +518,65 @@ export type Database = {
           },
         ]
       }
+      counsellor_assignments: {
+        Row: {
+          accepted_at: string | null
+          assigned_at: string
+          completed_at: string | null
+          counsellor_user_id: string
+          created_at: string
+          id: string
+          institution_id: string | null
+          listener_user_id: string | null
+          notes: string | null
+          priority: string
+          reason: string | null
+          risk_level: string | null
+          status: string
+          student_user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          assigned_at?: string
+          completed_at?: string | null
+          counsellor_user_id: string
+          created_at?: string
+          id?: string
+          institution_id?: string | null
+          listener_user_id?: string | null
+          notes?: string | null
+          priority?: string
+          reason?: string | null
+          risk_level?: string | null
+          status?: string
+          student_user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          assigned_at?: string
+          completed_at?: string | null
+          counsellor_user_id?: string
+          created_at?: string
+          id?: string
+          institution_id?: string | null
+          listener_user_id?: string | null
+          notes?: string | null
+          priority?: string
+          reason?: string | null
+          risk_level?: string | null
+          status?: string
+          student_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "counsellor_assignments_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       counselor_availability: {
         Row: {
           counselor_id: string
@@ -1306,6 +1365,68 @@ export type Database = {
           },
         ]
       }
+      student_risk_profiles: {
+        Row: {
+          assigned_counsellor_id: string | null
+          assigned_listener_id: string | null
+          created_at: string
+          crisis_count: number | null
+          emotional_pattern: Json | null
+          id: string
+          institution_id: string | null
+          last_crisis_detected_at: string | null
+          last_mood_score: number | null
+          needs_counselling: boolean | null
+          notes: string | null
+          risk_level: string
+          suicide_roadmap_stage: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_counsellor_id?: string | null
+          assigned_listener_id?: string | null
+          created_at?: string
+          crisis_count?: number | null
+          emotional_pattern?: Json | null
+          id?: string
+          institution_id?: string | null
+          last_crisis_detected_at?: string | null
+          last_mood_score?: number | null
+          needs_counselling?: boolean | null
+          notes?: string | null
+          risk_level?: string
+          suicide_roadmap_stage?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_counsellor_id?: string | null
+          assigned_listener_id?: string | null
+          created_at?: string
+          crisis_count?: number | null
+          emotional_pattern?: Json | null
+          id?: string
+          institution_id?: string | null
+          last_crisis_detected_at?: string | null
+          last_mood_score?: number | null
+          needs_counselling?: boolean | null
+          notes?: string | null
+          risk_level?: string
+          suicide_roadmap_stage?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_risk_profiles_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_rooms: {
         Row: {
           category: string
@@ -1562,6 +1683,44 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          institution_id: string | null
+          is_verified: boolean | null
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          institution_id?: string | null
+          is_verified?: boolean | null
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          institution_id?: string | null
+          is_verified?: boolean | null
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_training_progress: {
         Row: {
           completed_at: string | null
@@ -1676,6 +1835,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_crisis_moderator: { Args: { _user_id: string }; Returns: boolean }
       is_institution_admin: {
         Args: { _institution_id: string; _user_id: string }
@@ -1687,7 +1857,12 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role:
+        | "student"
+        | "parent"
+        | "listener"
+        | "counsellor"
+        | "institution_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1814,6 +1989,14 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: [
+        "student",
+        "parent",
+        "listener",
+        "counsellor",
+        "institution_admin",
+      ],
+    },
   },
 } as const

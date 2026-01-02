@@ -1,4 +1,8 @@
 // Crisis detection keywords and patterns
+import { detectSuicideRoadmapStage, RoadmapDetectionResult, SuicideRoadmapStage } from './suicideRoadmapDetection';
+
+export { detectSuicideRoadmapStage, type RoadmapDetectionResult, type SuicideRoadmapStage };
+
 const CRISIS_PATTERNS = {
   critical: [
     /\b(kill|end)\s*(myself|my life)\b/i,
