@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.send-panic-alert]
 verify_jwt = false
+
+[functions.send-crisis-notification]
+verify_jwt = false

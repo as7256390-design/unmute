@@ -194,15 +194,10 @@ export function ListenerCounsellorPortal() {
   }
 
   if (!isVerified) {
+    const { RoleVerificationRequest } = await import('./RoleVerificationRequest');
     return (
-      <div className="max-w-lg mx-auto p-6 text-center">
-        <div className="w-16 h-16 rounded-full bg-warning/20 flex items-center justify-center mx-auto mb-4">
-          <Clock className="h-8 w-8 text-warning" />
-        </div>
-        <h2 className="font-display text-xl font-semibold mb-2">Verification Pending</h2>
-        <p className="text-muted-foreground">
-          Your role is pending verification. An institution admin will verify your credentials soon.
-        </p>
+      <div className="p-6">
+        <RoleVerificationRequest requestedRole={isCounsellor ? 'counsellor' : 'listener'} />
       </div>
     );
   }

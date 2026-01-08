@@ -47,6 +47,42 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_notification_settings: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          notify_by_email: boolean | null
+          notify_by_sms: boolean | null
+          notify_critical_only: boolean | null
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          notify_by_email?: boolean | null
+          notify_by_sms?: boolean | null
+          notify_critical_only?: boolean | null
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          notify_by_email?: boolean | null
+          notify_by_sms?: boolean | null
+          notify_critical_only?: boolean | null
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       alignment_responses: {
         Row: {
           area_id: string
@@ -692,6 +728,59 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      crisis_response_logs: {
+        Row: {
+          action_details: string | null
+          action_type: string
+          created_at: string
+          crisis_alert_id: string | null
+          follow_up_date: string | null
+          follow_up_required: boolean | null
+          id: string
+          notification_sent: boolean | null
+          notification_type: string | null
+          outcome: string | null
+          responder_user_id: string
+          student_user_id: string
+        }
+        Insert: {
+          action_details?: string | null
+          action_type: string
+          created_at?: string
+          crisis_alert_id?: string | null
+          follow_up_date?: string | null
+          follow_up_required?: boolean | null
+          id?: string
+          notification_sent?: boolean | null
+          notification_type?: string | null
+          outcome?: string | null
+          responder_user_id: string
+          student_user_id: string
+        }
+        Update: {
+          action_details?: string | null
+          action_type?: string
+          created_at?: string
+          crisis_alert_id?: string | null
+          follow_up_date?: string | null
+          follow_up_required?: boolean | null
+          id?: string
+          notification_sent?: boolean | null
+          notification_type?: string | null
+          outcome?: string | null
+          responder_user_id?: string
+          student_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crisis_response_logs_crisis_alert_id_fkey"
+            columns: ["crisis_alert_id"]
+            isOneToOne: false
+            referencedRelation: "crisis_alerts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       emergency_contacts: {
         Row: {
