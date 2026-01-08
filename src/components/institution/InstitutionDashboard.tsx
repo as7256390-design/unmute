@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { RoleVerificationPanel } from './RoleVerificationPanel';
 import { CrisisAlertsPanel } from './CrisisAlertsPanel';
+import { CrisisResponseLog } from './CrisisResponseLog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';

@@ -1,16 +1,34 @@
-import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Heart } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Send, Sparkles, Heart, Trash2, MoreVertical, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { EmotionalCheckIn } from './EmotionalCheckIn';
+import { ChatSidebar } from './ChatSidebar';
 import { Message } from '@/types';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { detectCrisis } from '@/lib/crisisDetection';
 import { CrisisResourcesBanner } from '@/components/crisis/CrisisResourcesBanner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
@@ -23,6 +41,15 @@ const initialGreetings = [
 ];
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
+
+interface DbMessage {
+  id: string;
+  conversation_id: string;
+  user_id: string;
+  role: string;
+  content: string;
+  created_at: string;
+}
 
 async function streamChat({
   messages,
@@ -60,7 +87,6 @@ async function streamChat({
         const errorData = await resp.json();
         errorMessage = errorData.error || errorMessage;
       } catch {
-        // If response isn't JSON, use status text
         errorMessage = resp.statusText || errorMessage;
       }
       
@@ -154,113 +180,110 @@ async function streamChat({
 }
 
 export function ChatInterface() {
-  const { currentChat, addMessage, createNewChat, currentEmotionalState, setCurrentChat } = useApp();
+  const { currentEmotionalState } = useApp();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
-  const [showCheckIn, setShowCheckIn] = useState(!currentChat || currentChat.messages.length === 0);
+  const [showCheckIn, setShowCheckIn] = useState(true);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<DbMessage[]>([]);
   const [showCrisisResources, setShowCrisisResources] = useState(false);
   const [isAbuse, setIsAbuse] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(!isMobile);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [currentChat?.messages, streamingContent]);
+  }, [messages, streamingContent]);
 
-  // Load existing conversation on mount
-  useEffect(() => {
+  const loadConversation = useCallback(async (convId: string) => {
     if (!user) return;
     
-    const loadRecentConversation = async () => {
-      const { data: conversations } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false })
-        .limit(1);
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('conversation_id', convId)
+      .order('created_at', { ascending: true });
 
-      if (conversations && conversations.length > 0) {
-        const conv = conversations[0];
-        setConversationId(conv.id);
+    if (error) {
+      console.error('Error loading messages:', error);
+      return;
+    }
 
-        // Load messages
-        const { data: messages } = await supabase
-          .from('chat_messages')
-          .select('*')
-          .eq('conversation_id', conv.id)
-          .order('created_at', { ascending: true });
-
-        if (messages && messages.length > 0) {
-          const chat = createNewChat();
-          messages.forEach((msg) => {
-            addMessage(chat.id, {
-              role: msg.role as 'user' | 'assistant',
-              content: msg.content,
-            });
-          });
-          setShowCheckIn(false);
-        }
-      }
-    };
-
-    loadRecentConversation();
+    setMessages(data || []);
+    setConversationId(convId);
+    setShowCheckIn(false);
   }, [user]);
 
   const saveMessageToDb = async (role: 'user' | 'assistant', content: string, convId: string) => {
-    if (!user) return;
+    if (!user) return null;
 
-    await supabase.from('chat_messages').insert({
-      conversation_id: convId,
-      user_id: user.id,
-      role,
-      content,
-    });
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .insert({
+        conversation_id: convId,
+        user_id: user.id,
+        role,
+        content,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error saving message:', error);
+      return null;
+    }
+    return data;
   };
 
   const handleCheckInComplete = async (emotion: string, supportType: string) => {
-    const chat = currentChat || createNewChat();
+    if (!user) return;
+    
     setShowCheckIn(false);
 
     // Create conversation in DB
-    if (user) {
-      const { data: conv } = await supabase
-        .from('conversations')
-        .insert({
-          user_id: user.id,
-          emotional_state: emotion,
-        })
-        .select()
-        .single();
+    const { data: conv, error } = await supabase
+      .from('conversations')
+      .insert({
+        user_id: user.id,
+        emotional_state: emotion,
+        title: `Feeling ${emotion}`,
+      })
+      .select()
+      .single();
 
-      if (conv) {
-        setConversationId(conv.id);
-      }
+    if (error || !conv) {
+      toast.error('Failed to start conversation');
+      return;
     }
-    
-    setTimeout(() => {
-      const greeting = initialGreetings[Math.floor(Math.random() * initialGreetings.length)];
-      addMessage(chat.id, {
-        role: 'assistant',
-        content: greeting,
-        emotionalContext: emotion as any,
-      });
 
-      if (user && conversationId) {
-        saveMessageToDb('assistant', greeting, conversationId);
-      }
-    }, 500);
+    setConversationId(conv.id);
+    
+    // Add greeting message
+    const greeting = initialGreetings[Math.floor(Math.random() * initialGreetings.length)];
+    const savedMsg = await saveMessageToDb('assistant', greeting, conv.id);
+    if (savedMsg) {
+      setMessages([savedMsg]);
+    }
+  };
+
+  const handleNewConversation = () => {
+    setConversationId(null);
+    setMessages([]);
+    setShowCheckIn(true);
   };
 
   const handleSend = async () => {
-    if (!input.trim() || isTyping) return;
+    if (!input.trim() || isTyping || !conversationId || !user) return;
     
-    const chat = currentChat || createNewChat();
     const userMessage = input.trim();
     
-    // Validate message length (prevent excessively long messages)
+    // Validate message length
     const MAX_MESSAGE_LENGTH = 5000;
     if (userMessage.length > MAX_MESSAGE_LENGTH) {
       toast.error(`Message is too long. Maximum ${MAX_MESSAGE_LENGTH} characters allowed.`);
@@ -276,34 +299,28 @@ export function ChatInterface() {
       setIsAbuse(crisisResult.isAbuse);
 
       // Log crisis alert
-      if (user && conversationId) {
-        await supabase.from('crisis_alerts').insert({
-          user_id: user.id,
-          source_type: 'chat',
-          source_id: conversationId,
-          content: userMessage,
-          severity: crisisResult.severity,
-          keywords_matched: crisisResult.matchedKeywords,
-        });
-      }
+      await supabase.from('crisis_alerts').insert({
+        user_id: user.id,
+        source_type: 'chat',
+        source_id: conversationId,
+        content: userMessage,
+        severity: crisisResult.severity,
+        keywords_matched: crisisResult.matchedKeywords,
+      });
     }
     
-    addMessage(chat.id, {
-      role: 'user',
-      content: userMessage,
-    });
-
-    // Save user message to DB
-    if (user && conversationId) {
-      await saveMessageToDb('user', userMessage, conversationId);
+    // Save and display user message
+    const savedUserMsg = await saveMessageToDb('user', userMessage, conversationId);
+    if (savedUserMsg) {
+      setMessages(prev => [...prev, savedUserMsg]);
     }
 
     setIsTyping(true);
     setStreamingContent('');
 
-    // Build message history for AI (filter out system messages)
+    // Build message history for AI
     const chatMessages: ChatMessage[] = [
-      ...(chat.messages || [])
+      ...messages
         .filter(m => m.role === 'user' || m.role === 'assistant')
         .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
       { role: 'user' as const, content: userMessage }
@@ -320,25 +337,20 @@ export function ChatInterface() {
       },
       onDone: async () => {
         if (assistantContent) {
-          addMessage(chat.id, {
-            role: 'assistant',
-            content: assistantContent,
-          });
+          const savedAssistantMsg = await saveMessageToDb('assistant', assistantContent, conversationId);
+          if (savedAssistantMsg) {
+            setMessages(prev => [...prev, savedAssistantMsg]);
+          }
 
-          // Save assistant message to DB
-          if (user && conversationId) {
-            await saveMessageToDb('assistant', assistantContent, conversationId);
-            
-            // Update conversation title from first user message
-            if (chat.messages.length <= 2) {
-              await supabase
-                .from('conversations')
-                .update({ 
-                  title: userMessage.slice(0, 50) + (userMessage.length > 50 ? '...' : ''),
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', conversationId);
-            }
+          // Update conversation title from first user message
+          if (messages.length <= 1) {
+            await supabase
+              .from('conversations')
+              .update({ 
+                title: userMessage.slice(0, 50) + (userMessage.length > 50 ? '...' : ''),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', conversationId);
           }
         }
         setStreamingContent('');
@@ -352,12 +364,46 @@ export function ChatInterface() {
     });
   };
 
+  const deleteMessage = async (messageId: string) => {
+    try {
+      const { error } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('id', messageId);
+
+      if (error) throw error;
+      
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      toast.success('Message deleted');
+    } catch (err) {
+      console.error('Error deleting message:', err);
+      toast.error('Failed to delete message');
+    }
+  };
+
+  const confirmDeleteMessage = (id: string) => {
+    setMessageToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
+
+  if (!user) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <Sparkles className="h-12 w-12 mx-auto mb-4 text-primary" />
+          <h2 className="text-xl font-semibold mb-2">Welcome to Unmute</h2>
+          <p className="text-muted-foreground">Please sign in to start chatting</p>
+        </div>
+      </div>
+    );
+  }
 
   if (showCheckIn) {
     return (
@@ -368,90 +414,158 @@ export function ChatInterface() {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Crisis Resources Banner */}
-      {showCrisisResources && (
-        <div className="p-4 pb-0">
-          <CrisisResourcesBanner
-            isAbuse={isAbuse}
-            onDismiss={() => setShowCrisisResources(false)}
+    <div className="h-full flex">
+      {/* Sidebar */}
+      {showSidebar && (
+        <div className={cn(
+          "w-72 flex-shrink-0",
+          isMobile && "absolute inset-y-0 left-0 z-50 bg-background"
+        )}>
+          <ChatSidebar
+            currentConversationId={conversationId}
+            onSelectConversation={loadConversation}
+            onNewConversation={handleNewConversation}
           />
         </div>
       )}
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {currentChat?.messages.map((message, index) => (
-          <MessageBubble key={message.id} message={message} index={index} />
-        ))}
-        
-        {isTyping && (
-          <div className="flex items-start gap-3 animate-fade-in">
-            <div className="w-8 h-8 rounded-full gradient-hero flex items-center justify-center flex-shrink-0">
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="border-b border-border p-3 flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowSidebar(!showSidebar)}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full gradient-hero flex items-center justify-center">
               <Sparkles className="h-4 w-4 text-primary-foreground" />
             </div>
-            <div className="glass rounded-2xl rounded-tl-md px-4 py-3 max-w-[70%]">
-              {streamingContent ? (
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{streamingContent}</p>
-              ) : (
-                <div className="flex gap-1">
-                  <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-              )}
+            <div>
+              <h3 className="font-medium text-sm">Unmute</h3>
+              <p className="text-xs text-muted-foreground">Always here for you</p>
             </div>
           </div>
-        )}
-        
-        <div ref={messagesEndRef} />
-      </div>
+        </div>
 
-      {/* Input Area */}
-      <div className="border-t border-border p-4 bg-background/80 backdrop-blur-sm">
-        <div className="max-w-3xl mx-auto">
-          <div className="relative glass rounded-xl p-2">
-            <Textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="What's on your mind? I'm here to listen..."
-              className="min-h-[60px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pr-12"
-              rows={1}
+        {/* Crisis Resources Banner */}
+        {showCrisisResources && (
+          <div className="p-4 pb-0">
+            <CrisisResourcesBanner
+              isAbuse={isAbuse}
+              onDismiss={() => setShowCrisisResources(false)}
             />
-            <Button
-              variant="gradient"
-              size="icon"
-              onClick={handleSend}
-              disabled={!input.trim() || isTyping}
-              className="absolute right-2 bottom-2"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
           </div>
-          <div className="flex items-center justify-center gap-2 mt-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-safe animate-pulse" />
-            <p className="text-xs text-muted-foreground">
-              Private & encrypted • No one can see your conversations
-            </p>
+        )}
+
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.map((message, index) => (
+            <MessageBubble 
+              key={message.id} 
+              message={message} 
+              index={index}
+              onDelete={() => confirmDeleteMessage(message.id)}
+            />
+          ))}
+          
+          {isTyping && (
+            <div className="flex items-start gap-3 animate-fade-in">
+              <div className="w-8 h-8 rounded-full gradient-hero flex items-center justify-center flex-shrink-0">
+                <Sparkles className="h-4 w-4 text-primary-foreground" />
+              </div>
+              <div className="glass rounded-2xl rounded-tl-md px-4 py-3 max-w-[70%]">
+                {streamingContent ? (
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{streamingContent}</p>
+                ) : (
+                  <div className="flex gap-1">
+                    <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input Area */}
+        <div className="border-t border-border p-4 bg-background/80 backdrop-blur-sm">
+          <div className="max-w-3xl mx-auto">
+            <div className="relative glass rounded-xl p-2">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="What's on your mind? I'm here to listen..."
+                className="min-h-[60px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pr-12"
+                rows={1}
+              />
+              <Button
+                variant="gradient"
+                size="icon"
+                onClick={handleSend}
+                disabled={!input.trim() || isTyping}
+                className="absolute right-2 bottom-2"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-safe animate-pulse" />
+              <p className="text-xs text-muted-foreground">
+                Private & encrypted • Available 24/7
+              </p>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Delete Message Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Message</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this message? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (messageToDelete) {
+                  deleteMessage(messageToDelete);
+                }
+                setDeleteDialogOpen(false);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
-function MessageBubble({ message, index }: { message: Message; index: number }) {
+function MessageBubble({ message, index, onDelete }: { message: DbMessage; index: number; onDelete: () => void }) {
   const isUser = message.role === 'user';
   
   return (
     <div 
       className={cn(
-        "flex items-start gap-3 animate-slide-up",
+        "group flex items-start gap-3 animate-slide-up",
         isUser && "flex-row-reverse"
       )}
-      style={{ animationDelay: `${index * 50}ms` }}
+      style={{ animationDelay: `${Math.min(index * 50, 500)}ms` }}
     >
       <div 
         className={cn(
@@ -467,7 +581,7 @@ function MessageBubble({ message, index }: { message: Message; index: number }) 
       </div>
       <div 
         className={cn(
-          "max-w-[70%] rounded-2xl px-4 py-3",
+          "relative max-w-[70%] rounded-2xl px-4 py-3",
           isUser 
             ? "bg-primary text-primary-foreground rounded-tr-md" 
             : "glass rounded-tl-md"
@@ -478,8 +592,30 @@ function MessageBubble({ message, index }: { message: Message; index: number }) 
           "text-[10px] mt-2 opacity-60",
           isUser ? "text-primary-foreground" : "text-muted-foreground"
         )}>
-          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </p>
+        
+        {/* Delete button on hover */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className={cn(
+                "absolute -top-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity",
+                isUser ? "-left-8" : "-right-8"
+              )}
+            >
+              <MoreVertical className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align={isUser ? "start" : "end"}>
+            <DropdownMenuItem onClick={onDelete} className="text-destructive">
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
