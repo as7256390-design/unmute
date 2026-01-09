@@ -127,7 +127,7 @@ export function AppSidebar() {
             <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center">
               <Heart className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="font-display font-semibold text-lg">Unmute</span>
+            <span className="font-display font-semibold text-lg">Aprivox</span>
           </div>
           <Button
             variant="ghost"
@@ -382,7 +382,7 @@ export function AppSidebar() {
           <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center">
             <Heart className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="font-display font-semibold text-lg text-foreground">Unmute</span>
+          <span className="font-display font-semibold text-lg text-foreground">Aprivox</span>
         </div>
         <Button
           variant="ghost"

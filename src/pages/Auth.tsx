@@ -89,7 +89,7 @@ export default function Auth() {
             toast.error(error.message);
           }
         } else {
-          toast.success('Account created! Welcome to Unmute.');
+          toast.success('Account created! Welcome to Aprivox.');
           navigate('/');
         }
       }
@@ -143,7 +143,7 @@ export default function Auth() {
   const getTitle = () => {
     switch (mode) {
       case 'forgot-password': return 'Reset Password';
-      case 'signup': return 'Join Unmute';
+      case 'signup': return 'Join Aprivox';
       default: return 'Welcome Back';
     }
   };

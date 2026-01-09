@@ -398,7 +398,7 @@ export function ChatInterface() {
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <Sparkles className="h-12 w-12 mx-auto mb-4 text-primary" />
-          <h2 className="text-xl font-semibold mb-2">Welcome to Unmute</h2>
+          <h2 className="text-xl font-semibold mb-2">Welcome to Aprivox</h2>
           <p className="text-muted-foreground">Please sign in to start chatting</p>
         </div>
       </div>
@@ -445,7 +445,7 @@ export function ChatInterface() {
               <Sparkles className="h-4 w-4 text-primary-foreground" />
             </div>
             <div>
-              <h3 className="font-medium text-sm">Unmute</h3>
+              <h3 className="font-medium text-sm">Aprivox</h3>
               <p className="text-xs text-muted-foreground">Always here for you</p>
             </div>
           </div>

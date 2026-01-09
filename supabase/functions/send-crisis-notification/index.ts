@@ -74,11 +74,11 @@ serve(async (req) => {
                     ${details ? `<p><strong>Details:</strong> ${details}</p>` : ''}
                     <hr style="border: 1px solid #fecaca; margin: 20px 0;" />
                     <p style="color: #666; font-size: 14px;">
-                      This is an automated alert from UNMUTE. Please log in to the dashboard to review and take appropriate action.
+                      This is an automated alert from Aprivox. Please log in to the dashboard to review and take appropriate action.
                     </p>
                   </div>
                   <div style="padding: 15px; background: #f3f4f6; text-align: center; font-size: 12px; color: #666;">
-                    UNMUTE Mental Health Support Platform
+                    Aprivox Mental Health Support Platform
                   </div>
                 </div>
               `;
@@ -91,7 +91,7 @@ serve(async (req) => {
                   'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                  from: 'UNMUTE Crisis Alerts <alerts@resend.dev>',
+                  from: 'Aprivox Crisis Alerts <alerts@resend.dev>',
                   to: [admin.email],
                   subject: `🚨 URGENT: Crisis Alert ${riskLevel ? `- ${riskLevel.toUpperCase()} Risk` : ''}`,
                   html: emailHtml,
@@ -126,7 +126,7 @@ serve(async (req) => {
         for (const admin of admins) {
           if (admin.notify_by_sms && admin.phone) {
             try {
-              const message = `🚨 UNMUTE CRISIS ALERT\n${riskLevel ? `Risk: ${riskLevel.toUpperCase()}\n` : ''}${stage ? `Stage: ${stage}\n` : ''}${action ? `Action: ${action.replace(/_/g, ' ')}\n` : ''}Check dashboard immediately.`;
+              const message = `🚨 APRIVOX CRISIS ALERT\n${riskLevel ? `Risk: ${riskLevel.toUpperCase()}\n` : ''}${stage ? `Stage: ${stage}\n` : ''}${action ? `Action: ${action.replace(/_/g, ' ')}\n` : ''}Check dashboard immediately.`;
 
               const response = await fetch(
                 `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,

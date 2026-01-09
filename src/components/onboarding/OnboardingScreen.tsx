@@ -119,7 +119,7 @@ export function OnboardingScreen() {
               </motion.div>
 
               <h1 className="font-display text-5xl md:text-6xl font-bold mb-4 text-foreground">
-                Welcome to <span className="text-gradient">Unmute</span>
+                Welcome to <span className="text-gradient">Aprivox</span>
               </h1>
               
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-4">
@@ -187,7 +187,7 @@ export function OnboardingScreen() {
                 We've designed unique experiences for both students and parents.
               </p>
               <p className="text-muted-foreground/70 mb-12 max-w-lg mx-auto">
-                Emotional well-being is a family journey. That's why Unmute supports both generations 
+                Emotional well-being is a family journey. That's why Aprivox supports both generations 
                 to understand each other better.
               </p>
 

@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     // Clear app state from localStorage
     try {
-      localStorage.removeItem('unmute_user_type');
+      localStorage.removeItem('aprivox_user_type');
     } catch {
       // localStorage not available
     }

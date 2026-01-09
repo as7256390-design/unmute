@@ -17,8 +17,8 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "robots.txt"],
       manifest: {
-        name: "Unmute - Mental Wellness",
-        short_name: "Unmute",
+        name: "Aprivox - Mental Wellness",
+        short_name: "Aprivox",
         description: "Your safe space to be heard - Mental wellness support for students",
         theme_color: "#8b5cf6",
         background_color: "#0f0d1a",
