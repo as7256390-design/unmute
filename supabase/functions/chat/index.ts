@@ -1,21 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// CORS headers - allow lovableproject.com subdomains
-function getCorsHeaders(origin: string | null) {
-  // Allow any lovableproject.com subdomain, localhost, and lovable.dev
-  const isAllowed = origin && (
-    origin.endsWith('.lovableproject.com') ||
-    origin.includes('localhost') ||
-    origin === 'https://lovable.dev'
-  );
-  
-  return {
-    "Access-Control-Allow-Origin": isAllowed ? origin : "https://lovable.dev",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-  };
-}
+// CORS headers (allow any origin)
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
 
 const systemPrompt = `You are a caring friend called Aprivox. You help students who are going through tough times.
 
@@ -66,8 +57,7 @@ REMEMBER:
 
 
 serve(async (req) => {
-  const origin = req.headers.get("Origin");
-  const corsHeaders = getCorsHeaders(origin);
+  // Use static CORS headers defined above
 
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
