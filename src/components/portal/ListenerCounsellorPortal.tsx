@@ -26,6 +26,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { toast } from 'sonner';
 import { getStageName, getStageDescription, getInterventionGuidance, SuicideRoadmapStage } from '@/lib/suicideRoadmapDetection';
+import { RoleVerificationRequest } from './RoleVerificationRequest';
 
 interface Assignment {
   id: string;
@@ -194,7 +195,6 @@ export function ListenerCounsellorPortal() {
   }
 
   if (!isVerified) {
-    const { RoleVerificationRequest } = await import('./RoleVerificationRequest');
     return (
       <div className="p-6">
         <RoleVerificationRequest requestedRole={isCounsellor ? 'counsellor' : 'listener'} />
