@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Unmute",
+    "name": "Aprivox",
     "tagline": "您被倾听的安全空间"
   },
   "nav": {
@@ -56,7 +56,7 @@
     "meditation": "冥想"
   },
   "onboarding": {
-    "welcome": "欢迎来到 Unmute",
+    "welcome": "欢迎来到 Aprivox",
     "studentTitle": "我是学生",
     "studentDesc": "获得支持，追踪您的心理健康，与同龄人建立联系",
     "parentTitle": "我是家长",

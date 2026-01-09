@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Unmute",
+    "name": "Aprivox",
     "tagline": "आपकी सुनी जाने की सुरक्षित जगह"
   },
   "nav": {
@@ -56,7 +56,7 @@
     "meditation": "ध्यान"
   },
   "onboarding": {
-    "welcome": "Unmute में आपका स्वागत है",
+    "welcome": "Aprivox में आपका स्वागत है",
     "studentTitle": "मैं छात्र हूं",
     "studentDesc": "सहायता प्राप्त करें, अपनी मानसिक भलाई को ट्रैक करें और साथियों से जुड़ें",
     "parentTitle": "मैं माता-पिता हूं",

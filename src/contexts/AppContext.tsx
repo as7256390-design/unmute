@@ -33,7 +33,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 // Get initial userType from localStorage
 const getInitialUserType = (): 'student' | 'parent' | null => {
   try {
-    const stored = localStorage.getItem('unmute_user_type');
+    const stored = localStorage.getItem('aprivox_user_type');
     if (stored === 'student' || stored === 'parent') {
       return stored;
     }
@@ -57,9 +57,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setUserTypeState(type);
     try {
       if (type) {
-        localStorage.setItem('unmute_user_type', type);
+        localStorage.setItem('aprivox_user_type', type);
       } else {
-        localStorage.removeItem('unmute_user_type');
+        localStorage.removeItem('aprivox_user_type');
       }
     } catch {
       // localStorage not available
