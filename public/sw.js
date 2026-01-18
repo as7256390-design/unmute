@@ -4,7 +4,7 @@ self.addEventListener('push', function(event) {
   console.log('Push event received:', event);
 
   let notificationData = {
-    title: 'MindfulU',
+    title: 'Aprivox',
     body: 'You have a new notification',
     icon: '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
