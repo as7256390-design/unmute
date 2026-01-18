@@ -105,8 +105,10 @@ serve(async (req) => {
 
     console.log("Authenticated user:", user.id);
 
-    const { messages, emotionalState } = await req.json();
-    
+    const { messages, emotionalState, stream } = await req.json();
+
+    const shouldStream = stream !== false;
+
     // Validate message content
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(
@@ -114,7 +116,7 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
+
     // Validate each message and ensure reasonable length limits
     const MAX_MESSAGE_LENGTH = 5000;
     for (const msg of messages) {
@@ -125,9 +127,9 @@ serve(async (req) => {
         );
       }
     }
-    
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
+
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
@@ -138,7 +140,7 @@ serve(async (req) => {
       contextualPrompt += `\n\nThe student has indicated they are feeling: ${emotionalState.mood || 'unspecified'}. Energy level: ${emotionalState.energy || 'unspecified'}. Context: ${emotionalState.context || 'none provided'}. Keep this emotional state in mind as you respond with extra care and sensitivity.`;
     }
 
-    console.log("Calling Lovable AI with messages:", messages.length);
+    console.log("Calling Lovable AI", { userId: user.id, messageCount: messages.length, shouldStream });
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -152,14 +154,14 @@ serve(async (req) => {
           { role: "system", content: contextualPrompt },
           ...messages,
         ],
-        stream: true,
+        stream: shouldStream,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      
+
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "I'm getting a lot of messages right now. Please try again in a moment." }), {
           status: 429,
@@ -172,15 +174,29 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      
+
       return new Response(JSON.stringify({ error: "Something went wrong. Please try again." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    if (shouldStream) {
+      return new Response(response.body, {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
+    }
+
+    const json = await response.json();
+    const content = json?.choices?.[0]?.message?.content ?? "";
+
+    return new Response(JSON.stringify({ content }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("Chat function error:", error);
