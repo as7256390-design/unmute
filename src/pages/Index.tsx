@@ -27,6 +27,7 @@ import { ChildSharedActivities } from '@/components/child/ChildSharedActivities'
 import { ListenerCounsellorPortal } from '@/components/portal/ListenerCounsellorPortal';
 import { SOSButton } from '@/components/crisis/SOSButton';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
+import { UpdatePrompt } from '@/components/pwa/UpdatePrompt';
 
 const Index = () => {
   const { currentView, userType } = useApp();
@@ -107,6 +108,7 @@ const Index = () => {
 
   return (
     <MainLayout>
+      <UpdatePrompt />
       <div className="h-screen overflow-y-auto pt-14 pb-20 md:pt-0 md:pb-0">
         {renderContent()}
       </div>
