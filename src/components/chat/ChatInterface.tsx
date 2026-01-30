@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { detectCrisis } from '@/lib/crisisDetection';
 import { CrisisResourcesBanner } from '@/components/crisis/CrisisResourcesBanner';
+import { AutomatedCrisisResponse } from '@/components/crisis/AutomatedCrisisResponse';
+import { useCrisisDetection } from '@/hooks/useCrisisDetection';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -105,6 +107,7 @@ export function ChatInterface() {
   const { currentEmotionalState } = useApp();
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const { analyzeMessage } = useCrisisDetection();
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
@@ -116,6 +119,9 @@ export function ChatInterface() {
   const [showSidebar, setShowSidebar] = useState(!isMobile);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const [showAutomatedCrisisResponse, setShowAutomatedCrisisResponse] = useState(false);
+  const [currentCrisisData, setCurrentCrisisData] = useState<any>(null);
+  const [currentCrisisMessage, setCurrentCrisisMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -214,20 +220,52 @@ export function ChatInterface() {
     
     setInput('');
 
-    // Check for crisis content
-    const crisisResult = detectCrisis(userMessage);
-    if (crisisResult.showResources) {
+    // Comprehensive crisis analysis
+    const crisisAnalysis = analyzeMessage(userMessage);
+    
+    // Show basic crisis resources for high/critical
+    if (crisisAnalysis.basicCrisis.showResources) {
       setShowCrisisResources(true);
-      setIsAbuse(crisisResult.isAbuse);
+      setIsAbuse(crisisAnalysis.basicCrisis.isAbuse);
+    }
 
-      // Log crisis alert
+    // Trigger automated crisis response for severe cases
+    if (crisisAnalysis.requiresAutomatedResponse) {
+      setCurrentCrisisData(crisisAnalysis.roadmapResult);
+      setCurrentCrisisMessage(userMessage);
+      setShowAutomatedCrisisResponse(true);
+
+      // Log crisis alert with roadmap stage
       await supabase.from('crisis_alerts').insert({
         user_id: user.id,
         source_type: 'chat',
         source_id: conversationId,
         content: userMessage,
-        severity: crisisResult.severity,
-        keywords_matched: crisisResult.matchedKeywords,
+        severity: crisisAnalysis.roadmapResult.severity,
+        keywords_matched: crisisAnalysis.roadmapResult.indicators,
+      });
+
+      // For critical/action stage, trigger immediate emergency dial
+      if (crisisAnalysis.triggerEmergencyDial) {
+        // Show prominent emergency dial prompt
+        toast.error('🚨 Emergency services are being contacted. Stay on the line.', {
+          duration: 10000,
+        });
+        
+        // Auto-dial after short delay (gives user time to see the message)
+        setTimeout(() => {
+          window.location.href = 'tel:112';
+        }, 2000);
+      }
+    } else if (crisisAnalysis.basicCrisis.showResources) {
+      // Just log basic crisis without automated response
+      await supabase.from('crisis_alerts').insert({
+        user_id: user.id,
+        source_type: 'chat',
+        source_id: conversationId,
+        content: userMessage,
+        severity: crisisAnalysis.basicCrisis.severity,
+        keywords_matched: crisisAnalysis.basicCrisis.matchedKeywords,
       });
     }
     
@@ -474,6 +512,20 @@ export function ChatInterface() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Automated Crisis Response Modal */}
+      {showAutomatedCrisisResponse && currentCrisisData && conversationId && (
+        <AutomatedCrisisResponse
+          crisisData={currentCrisisData}
+          messageContent={currentCrisisMessage}
+          conversationId={conversationId}
+          onDismiss={() => {
+            setShowAutomatedCrisisResponse(false);
+            setCurrentCrisisData(null);
+            setCurrentCrisisMessage('');
+          }}
+        />
+      )}
     </div>
   );
 }
