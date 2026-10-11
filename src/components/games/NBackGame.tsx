@@ -39,7 +39,7 @@ export const NBackGame: React.FC<NBackGameProps> = ({ onComplete, onExit }) => {
   const [trialStart, setTrialStart] = useState(0);
   const [streak, setStreak] = useState(0);
   const [matchType, setMatchType] = useState<'position' | 'shape' | 'both'>('position');
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   const isMatch = useCallback(() => {
     if (history.length < nLevel) return false;
