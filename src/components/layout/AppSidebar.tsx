@@ -499,7 +499,7 @@ export function AppSidebar() {
           <Button variant="ghost" size="icon-sm" onClick={() => toast.info('Help center coming soon!')}>
             <HelpCircle className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon-sm" onClick={handleSignOut} title="Sign out">
+          <Button variant="ghost" size="icon-sm" onClick={handleSignOut} title="Sign out" aria-label="Sign out">
             <LogOut className="h-4 w-4" />
           </Button>
         </div>

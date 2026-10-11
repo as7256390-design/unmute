@@ -266,7 +266,7 @@ function GroundingExercise() {
             <span className="text-6xl mb-4 block">{groundingSteps[currentStep].emoji}</span>
             <h2 className="font-display font-semibold text-xl mb-2">
               {groundingSteps[currentStep].count} things you can {groundingSteps[currentStep].sense.toLowerCase()}
-            </h3>
+            </h2>
             <p className="text-muted-foreground">{groundingSteps[currentStep].prompt}</p>
           </div>
 
