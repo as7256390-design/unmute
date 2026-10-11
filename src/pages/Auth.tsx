@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { Separator } from '@/components/ui/separator';
+import { PageMeta } from '@/components/seo/PageMeta';
 
 const emailSchema = z.string().email('Please enter a valid email');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -158,6 +159,7 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-background to-muted/30">
+      <PageMeta title="Sign In - ApriVox" description="Sign in or create your free ApriVox account to chat, track your mood and get mental wellness support." path="/auth" />
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
