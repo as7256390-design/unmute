@@ -132,7 +132,7 @@ export function AppSidebar() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setMobileMenuOpen(true)}
+            aria-label="Open menu" onClick={() => setMobileMenuOpen(true)}
           >
             <Menu className="h-5 w-5" />
           </Button>
@@ -336,7 +336,7 @@ export function AppSidebar() {
               variant={currentView === item.id ? 'soft' : 'ghost'}
               size="icon"
               onClick={() => handleNavClick(item.id)}
-              title={item.label}
+              title={item.label} aria-label={item.label}
             >
               <item.icon className="h-5 w-5" />
             </Button>
@@ -352,7 +352,7 @@ export function AppSidebar() {
               variant={currentView === item.id ? 'soft' : 'ghost'}
               size="icon"
               onClick={() => handleNavClick(item.id)}
-              title={item.label}
+              title={item.label} aria-label={item.label}
             >
               <item.icon className="h-5 w-5" />
             </Button>
@@ -364,7 +364,7 @@ export function AppSidebar() {
             variant={userType === 'parent' ? 'soft-secondary' : 'ghost'}
             size="icon"
             onClick={() => handleNavClick('parent')}
-            title="Parent Section"
+            title="Parent Section" aria-label="Parent Section"
           >
             <Users className="h-5 w-5" />
           </Button>
@@ -499,7 +499,7 @@ export function AppSidebar() {
           <Button variant="ghost" size="icon-sm" onClick={() => toast.info('Help center coming soon!')}>
             <HelpCircle className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon-sm" onClick={handleSignOut} title="Sign out">
+          <Button variant="ghost" size="icon-sm" onClick={handleSignOut} title="Sign out" aria-label="Sign out">
             <LogOut className="h-4 w-4" />
           </Button>
         </div>

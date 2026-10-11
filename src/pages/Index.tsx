@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { PageMeta } from '@/components/seo/PageMeta';
 import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -108,6 +109,7 @@ const Index = () => {
 
   return (
     <MainLayout>
+      <PageMeta title="ApriVox - Mental Wellness Support for Students & Parents" description="ApriVox is a safe space to be heard: AI emotional support, mood tracking, peer support and counsellor booking for students, parents and institutions." path="/" />
       <UpdatePrompt />
       <div className="h-screen overflow-y-auto pt-14 pb-20 md:pt-0 md:pb-0">
         {renderContent()}

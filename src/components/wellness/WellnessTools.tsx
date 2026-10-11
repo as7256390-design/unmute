@@ -75,7 +75,7 @@ export function WellnessTools() {
               <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-4", tool.color)}>
                 <tool.icon className="h-6 w-6 text-primary-foreground" />
               </div>
-              <h3 className="font-display font-semibold text-lg mb-1">{tool.label}</h3>
+              <h2 className="font-display font-semibold text-lg mb-1">{tool.label}</h2>
               <p className="text-sm text-muted-foreground">{tool.description}</p>
               <ChevronRight className="h-5 w-5 text-primary mt-2" />
             </button>
@@ -264,9 +264,9 @@ function GroundingExercise() {
         <div className="text-center">
           <div className="mb-6">
             <span className="text-6xl mb-4 block">{groundingSteps[currentStep].emoji}</span>
-            <h3 className="font-display font-semibold text-xl mb-2">
+            <h2 className="font-display font-semibold text-xl mb-2">
               {groundingSteps[currentStep].count} things you can {groundingSteps[currentStep].sense.toLowerCase()}
-            </h3>
+            </h2>
             <p className="text-muted-foreground">{groundingSteps[currentStep].prompt}</p>
           </div>
 
@@ -277,7 +277,7 @@ function GroundingExercise() {
       ) : (
         <div className="text-center">
           <span className="text-6xl mb-4 block">🎉</span>
-          <h3 className="font-display font-semibold text-xl mb-2">Great job!</h3>
+          <h2 className="font-display font-semibold text-xl mb-2">Great job!</h2>
           <p className="text-muted-foreground mb-4">You completed the grounding exercise. How do you feel?</p>
           <Button variant="outline" onClick={handleReset} className="gap-2">
             <RotateCcw className="h-4 w-4" />
