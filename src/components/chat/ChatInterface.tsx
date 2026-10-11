@@ -358,7 +358,7 @@ export function ChatInterface() {
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <Sparkles className="h-12 w-12 mx-auto mb-4 text-primary" />
-          <h2 className="text-xl font-semibold mb-2">Welcome to Aprivox</h2>
+          <h1 className="text-xl font-semibold mb-2">Welcome to Aprivox</h1>
           <p className="text-muted-foreground">Please sign in to start chatting</p>
         </div>
       </div>
@@ -396,7 +396,7 @@ export function ChatInterface() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setShowSidebar(!showSidebar)}
+            aria-label="Toggle conversations" onClick={() => setShowSidebar(!showSidebar)}
           >
             <Menu className="h-5 w-5" />
           </Button>
@@ -405,7 +405,7 @@ export function ChatInterface() {
               <Sparkles className="h-4 w-4 text-primary-foreground" />
             </div>
             <div>
-              <h3 className="font-medium text-sm">Aprivox</h3>
+              <h1 className="font-medium text-sm">Aprivox Chat</h1>
               <p className="text-xs text-muted-foreground">Always here for you</p>
             </div>
           </div>
@@ -574,7 +574,7 @@ function MessageBubble({ message, index, onDelete }: { message: DbMessage; index
           <DropdownMenuTrigger asChild>
             <Button 
               variant="ghost" 
-              size="icon" 
+              size="icon" aria-label="Message options"
               className={cn(
                 "absolute -top-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity",
                 isUser ? "-left-8" : "-right-8"
