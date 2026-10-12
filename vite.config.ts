@@ -1,11 +1,23 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+// Public (publishable) backend values used as a fallback when the build environment lacks .env
+const FALLBACK_SUPABASE_URL = "https://lgfewsifdmhodjdxojck.supabase.co";
+const FALLBACK_SUPABASE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnZmV3c2lmZG1ob2RqZHhvamNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3NjAzMjUsImV4cCI6MjA4MTMzNjMyNX0.6ggphTPpKbfAhXwonW0L10imigPLnPXjiiGJpLhuEeg";
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+  return {
+  define: {
+    "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(env.VITE_SUPABASE_URL || FALLBACK_SUPABASE_URL),
+    "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(env.VITE_SUPABASE_PUBLISHABLE_KEY || FALLBACK_SUPABASE_KEY),
+    "import.meta.env.VITE_SUPABASE_PROJECT_ID": JSON.stringify(env.VITE_SUPABASE_PROJECT_ID || "lgfewsifdmhodjdxojck"),
+  },
   server: {
     host: "::",
     port: 8080,
@@ -68,4 +80,5 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-}));
+};
+});
